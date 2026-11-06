@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import cv2
 import gradio as gr
 import numpy as np
 
@@ -52,6 +53,26 @@ if not CHECKPOINT.is_file():
 ENGINE = create_engine(device=_device)
 ENGINE.warmup()
 
+_MAX_PROCESSING_PIXELS = 12_000_000
+
+
+def _fit_pixel_budget(width: int, height: int) -> tuple[int, int]:
+    """Keep engine input within its memory-safe pixel budget."""
+
+    pixels = width * height
+    if pixels <= _MAX_PROCESSING_PIXELS:
+        return width, height
+
+    scale = (_MAX_PROCESSING_PIXELS / pixels) ** 0.5
+    fitted_width = max(1, int(round(width * scale)))
+    fitted_height = max(1, int(round(height * scale)))
+    while fitted_width * fitted_height > _MAX_PROCESSING_PIXELS:
+        if fitted_width >= fitted_height:
+            fitted_width -= 1
+        else:
+            fitted_height -= 1
+    return fitted_width, fitted_height
+
 
 def _format_result(image: np.ndarray, mode: str) -> tuple[np.ndarray, str]:
     if image is None:
@@ -60,19 +81,26 @@ def _format_result(image: np.ndarray, mode: str) -> tuple[np.ndarray, str]:
         raise gr.Error("Choose an RGB or RGBA image.")
 
     rgb = image[:, :, :3]
+    original_height, original_width = rgb.shape[:2]
+    processing_width, processing_height = _fit_pixel_budget(original_width, original_height)
+    was_resized = (processing_width, processing_height) != (original_width, original_height)
+    if was_resized:
+        rgb = cv2.resize(
+            rgb,
+            (processing_width, processing_height),
+            interpolation=cv2.INTER_AREA,
+        )
+    rgb = np.ascontiguousarray(rgb)
     if rgb.dtype == np.uint8:
         normalized = rgb.astype(np.float32) / 255.0
     else:
         normalized = np.clip(rgb.astype(np.float32), 0.0, 1.0)
     normalized = np.ascontiguousarray(normalized)
-    height, width = normalized.shape[:2]
-    if height * width > 12_000_000:
-        raise gr.Error("This demo accepts images up to 12 megapixels.")
 
     result: EnhanceResult | None = None
     request = EnhanceRequest(
         image=normalized,
-        original_size=(width, height),
+        original_size=(original_width, original_height),
         mode=mode,  # type: ignore[arg-type]
     )
     for item in ENGINE.run(request):
@@ -84,6 +112,12 @@ def _format_result(image: np.ndarray, mode: str) -> tuple[np.ndarray, str]:
     final = next((visual.image for visual in result.visuals if visual.key == "final"), None)
     if final is None:
         raise gr.Error("The engine did not return its final image.")
+    if was_resized:
+        final = cv2.resize(
+            final,
+            (original_width, original_height),
+            interpolation=cv2.INTER_CUBIC,
+        )
 
     chips = [
         f"- **{chip.label}:** {chip.value:.3f} ({chip.severity})"
@@ -101,6 +135,13 @@ def _format_result(image: np.ndarray, mode: str) -> tuple[np.ndarray, str]:
         f"Engine time: `{duration:.0f} ms`",
         f"**Audit:** {audit}",
     ]
+    if was_resized:
+        details.append(
+            f"**Resolution:** processed at {processing_width}×{processing_height} "
+            f"({processing_width * processing_height / 1_000_000:.1f} MP) to fit the "
+            f"restoration limit, then resized back to {original_width}×{original_height}. "
+            "Very fine detail above the processing resolution may not be preserved."
+        )
     if chips:
         details.append("\n".join(chips))
     warnings = [warning.message for warning in result.warnings]
