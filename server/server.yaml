@@ -1,0 +1,13 @@
+# Server defaults for the local hackathon demo.
+engine: fake                    # Set to real after installing core[vision] and optional model weights.
+mock_stage_delay_ms: 180        # Makes the mock stream visibly progressive.
+max_upload_bytes: 33554432      # Compressed upload limit (32 MiB).
+max_pixels: 12000000            # Core's processed-image limit; larger files are downscaled and disclosed.
+hard_max_pixels: 50000000       # Reject larger decoded images before full allocation.
+max_pending: 2                  # Bounded number of waiting still-image requests.
+max_live_sessions: 1
+run_retention: 30
+debug_validate: false
+gallery_dir: gallery
+runs_dir: runs
+results_dir: results

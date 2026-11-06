@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lumenx-server"
+version = "0.1.0"
+description = "LumenX low-light restoration API and reference interface"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.110,<1.0",
+    "uvicorn[standard]>=0.27,<1.0",
+    "python-multipart>=0.0.9",
+    "pillow>=10.0,<13.0",
+    "pydantic>=2.6,<3.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+eval = ["matplotlib>=3.8", "pandas>=2.1"]
+test = ["httpx2>=2.0.0"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["lumenx_server*"]
+
+[tool.setuptools.package-data]
+lumenx_server = ["frontend/*"]
