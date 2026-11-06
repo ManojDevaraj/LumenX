@@ -15,3 +15,8 @@ zerodce_pp:
   sha256: ca8855b90df9a80fa4195a831f33d3476b1964f787eb70602797c773067f3b84
   url: https://raw.githubusercontent.com/Li-Chongyi/Zero-DCE_extension/main/Zero-DCE%2B%2B/snapshots_Zero_DCE%2B%2B/Epoch99.pth
   license: CC-BY-NC-4.0; academic research purpose only per upstream
+zerodce_pp_finetuned:
+  filename: zerodce_pp_finetuned.pth
+  sha256: 90d375b5b00a2d413d0baf0e382d9dbf8128ba9e8ff30b84b797965a8a5ea65f
+  source: fine-tuned from publisher checkpoint on LOL-v1 our485/low only
+  license: CC-BY-NC-4.0; academic research purpose only per upstream

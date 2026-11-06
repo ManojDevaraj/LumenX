@@ -1,4 +1,45 @@
-# Core handoff — v0.3.0 released; v0.4.0 in progress
+# Core handoff — v0.4.0 released
+
+## core-v0.4.1 — release verified
+
+External verification found the tuned-hybrid proxy mask crash at 720p/1080p.
+The candidate replaces the one-channel proxy operation with a direct two-dimensional
+nearest-neighbour resize and adds CPU/GPU tests for flat and noisy non-black 720p
+and 1080p inputs. Request noise values now use native-resolution patch estimates,
+while perceptual metrics remain on the 512px proxy.
+
+Training script is `core/scripts/train_zerodce.py`; it used only
+`C:\Users\Manoj D\Desktop\CV_hackathon\LOLdataset\our485\low` (485 images),
+initialized from the publisher Zero-DCE++ checkpoint, on CUDA FP32 for 10 epochs.
+Loss decreased from 2.840631 at epoch 1 to 2.272758 at epoch 10. The first command
+session ended after epoch 3; training resumed from that saved state for seven more
+epochs. Checkpoint: `core/weights/zerodce_pp_finetuned.pth`; SHA256:
+`90d375b5b00a2d413d0baf0e382d9dbf8128ba9e8ff30b84b797965a8a5ea65f`.
+The package default selects `models.zerodce_checkpoint: finetuned`; publisher weights
+remain available by setting it to `publisher`. Registry verified all four checkpoint
+files and CUDA placement (`cuda:0`).
+
+Validation: CPU suite 359 passed, 13 GPU-marked cases deselected; Ruff clean.
+The user confirmed 39 GPU tests passed (149.18s) across test_hybrid,
+test_metrics and test_models_gpu after restoring Torch 2.6.0+cu124 and contrib
+OpenCV 4.11.0.86. PyIQA was verified by the user. Release tag core-v0.4.1 is created.
+
+## Final backend completion inventory (2026-11-07)
+
+Read-only dataset discovery found LOL-v1 at
+`C:\Users\Manoj D\Desktop\CV_hackathon\LOLdataset\our485\low` (training only)
+and `C:\Users\Manoj D\Desktop\CV_hackathon\LOLdataset\eval15\low` (evaluation only),
+with paired `high` sibling directories. LOL-v2 Real is at
+`C:\Users\Manoj D\Desktop\CV_hackathon\LOL-v2\Real_captured\{Train,Test}\{Low,Normal}`
+and Synthetic is at `C:\Users\Manoj D\Desktop\CV_hackathon\LOL-v2\Synthetic\{Train,Test}\{Low,Normal}`.
+No LIME, NPE, DICM or college dataset directory exists under the discovered
+`C:\Users\Manoj D\Desktop\CV_hackathon` tree. They must be located before their
+required real-image check and final evaluation; no datasets were copied into the repo.
+
+The core virtual environment is currently missing Torch/OpenCV after the interrupted
+CUDA restoration transfer, so no CPU or GPU runtime/test/training/evaluation claim
+has been made after v0.4.1 candidate `c7cc01a`. Restore it using `constraints.txt`,
+then verify CUDA, ximgproc and the metric models before release work resumes.
 
 ## Current development status
 
@@ -24,11 +65,14 @@ single repair pass were exercised, with cached deep output reused. Measured peak
 resident VRAM was 407 MiB. This verifies the v0.3.0 GPU gate; latency remains a
 reported metric rather than a release gate by user-approved scope reduction.
 
-The v0.3.0 release tag is created on `core`. v0.4 work now addresses estimator,
-denoise and brightness review findings, then adds the tuner, full MetricSuite,
-request-time metrics and final report. Tuner policy is fixed at 12 candidates and
-uses `clipiqa+custom`; confidence-validation is intentionally out of scope. Webcam
-and `enhance_frame` tuning comes after the v0.4 still-image path.
+The v0.3.0 release tag is created on `core`. v0.4 fixes estimator support,
+checkerboard flatness, denoise noise monotonicity and conservative brightness,
+with regression coverage. It adds a deterministic 12-candidate proxy tuner,
+candidate events, fixed-score feasibility selection and request-time MetricSuite
+metrics. PyIQA is pinned in the optional `core[iqa]` extra; if unavailable at runtime, CLIP-IQA is
+null with a reason and the tuner identifies the degraded `custom_no_clipiqa`
+recipe. Confidence-validation is intentionally out of scope; webcam and
+`enhance_frame` tuning comes after the v0.4 still-image path.
 
 Top-five separate CPU profile is in bench_results.md: guidedFilter, denoise, max,
 enhance_classical and multiply. It is not the required final hybrid v0.4 profile

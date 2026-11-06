@@ -125,3 +125,19 @@ def test_ablation_flags_do_not_change_input_request(monkeypatch):
     assert req.ablate == frozenset({"no_tuner"})
     modified = replace(req, seed=7)
     assert modified.ablate == req.ablate
+
+
+@pytest.mark.parametrize("shape", [(720, 1280), (1080, 1920)])
+@pytest.mark.parametrize("kind", ["flat", "noise"])
+def test_tuned_hybrid_large_nonblack_cpu_contract(shape, kind, monkeypatch):
+    """Proxy tuning retains a two-dimensional valid mask at 720p and 1080p."""
+    rng = np.random.default_rng(52)
+    image = np.full((*shape, 3), 0.05, np.float32)
+    if kind == "noise":
+        image += rng.uniform(0, 0.1, image.shape).astype(np.float32)
+    engine = create_engine(device="cpu")
+    stub_model(engine, monkeypatch)
+    req = EnhanceRequest(image, (shape[1], shape[0]), mode="hybrid")
+    items = list(engine.run(req))
+    assert validate_run(items, req) == []
+    assert len(items[-1].candidates) == 12

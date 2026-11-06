@@ -24,12 +24,13 @@ from .recoverability import enforce_gain
 from .render import colormap, diagnosis_visuals, final_visuals, recovery_visual, uint8
 from .report import classical_report, diagnosis_chips
 from .timing import timer
+from .tuner import tune
 from .validation import validate_request
 from .types import DenoiseResult, EnhanceParams
 
 
 class RealEngine:
-    """Classical, direct trained baselines, and explicit no_tuner hybrid processing."""
+    """Classical, direct trained baselines, and adaptive hybrid still processing."""
 
     def __init__(self, config_path: str | None = None, device: str | None = None) -> None:
         """Load immutable configuration once; do not download or instantiate models."""
@@ -67,17 +68,16 @@ class RealEngine:
         registry = self._registry
         checkpoints = [key for key in registry.runners if key.startswith("cidnet")]
         return {
-            "fake": False, "ready": True, "hybrid_ready": False, "warm": self._warm,
+            "fake": False, "ready": True, "hybrid_ready": bool(checkpoints or "zerodce_pp" in registry.runners), "warm": self._warm,
             "device": registry.device, "placement_policy": registry.policy,
             "modes": ["classical", "dl", "zerodce", "hybrid"],
-            "hybrid_requires_no_tuner": True,
+            "hybrid_requires_no_tuner": False,
             "hybrid_without_tuner_ready": bool(checkpoints or "zerodce_pp" in registry.runners),
             "models": {"cidnet": {"available": bool(checkpoints), "checkpoints": checkpoints},
                        "zerodce": {"available": "zerodce_pp" in registry.runners},
                        "iqa": dict.fromkeys(("clipiqa", "niqe", "brisque", "musiq", "lpips"), False)},
             "vram_mb": registry.memory(),
-            "degraded": (["tuner_unavailable", "iqa_unavailable"]
-                         + [f"{key}:{reason}" for key, reason in registry.errors.items()]
+            "degraded": (["iqa_unavailable"] + [f"{key}:{reason}" for key, reason in registry.errors.items()]
                          + [warning.code for warning in registry.warnings]),
             "core_version": __version__, "contract_version": CONTRACT_VERSION,
         }
@@ -97,12 +97,10 @@ class RealEngine:
             raise Cancelled("Enhancement cancelled.")
 
     def run(self, req: EnhanceRequest) -> Iterator[RunItem]:
-        """Validate once, then dispatch; explicit no_tuner is required until v0.4.0."""
+        """Validate once, then dispatch to the requested frozen schedule."""
         start = perf_counter()
         validate_request(req)
         self._cancel(req)
-        if req.mode == "hybrid" and "no_tuner" not in req.ablate:
-            raise EngineUnavailable("The tuner arrives in v0.4.0; request hybrid with explicit no_tuner meanwhile.")
         if req.mode == "classical":
             yield from self._run_classical(req, start)
         else:
@@ -225,7 +223,7 @@ class RealEngine:
             # GeneratorExit discards the frame and all remaining local arrays.
 
     def _run_neural(self, req: EnhanceRequest, start: float) -> Iterator[RunItem]:
-        """Run direct trained baselines or no_tuner hybrid, with one cached-output repair."""
+        """Run direct trained baselines or hybrid, with one cached-output repair."""
         from . import __version__
         from .diagnose import luminance
 
@@ -240,6 +238,9 @@ class RealEngine:
         deep_result = classical = None
         repair_attempted = False
         fallback_audit: list[dict[str, Any]] = []
+        candidates = []
+        scoring_recipe = "not_run"
+        chosen_params = None
         try:
             valid = np.ones(req.image.shape[:2], bool) if req.alpha is None else req.alpha > 0
             image = req.image
@@ -256,7 +257,7 @@ class RealEngine:
             story.append(StoryStep(event.title, event.caption, "illumination"))
             yield event
             self._cancel(req)
-            if hybrid:
+            if hybrid and "no_tuner" in req.ablate:
                 warnings.append(EngineWarning("tuner_disabled", "Your no_tuner request uses the configured fixed parameters."))
             for warning in warnings:
                 yield StageEvent("warning", warning.code, "Processing limitation", warning.message, "", [], None, asdict(warning), 0.0)
@@ -273,9 +274,25 @@ class RealEngine:
             yield event
             self._cancel(req)
 
+            if hybrid and "no_tuner" not in req.ablate:
+                with timer(timings, "tuner"):
+                    candidates, candidate_visuals, chosen_params, scoring_recipe = tune(image, diagnosis, cfg, req.seed)
+                for candidate, visual in zip(candidates, candidate_visuals):
+                    yield StageEvent("candidate", visual.key, "Trying a light setting",
+                                     "Compared this setting using fixed quality checks.",
+                                     "Twelve deterministic proxy candidates; CLIP-IQA is recorded when available.",
+                                     [visual], visual.key, asdict(candidate), 0.0)
+                    self._cancel(req)
+                yield self._stage("tuner", "Choosing a setting", "Selected the feasible setting with the strongest fixed score.",
+                                  "Twelve candidates; fixed normalization constants; clipiqa+custom recipe.", [],
+                                  candidates[[candidate.chosen for candidate in candidates].index(True)].thumb_key,
+                                  {"chosen_id": next(candidate.id for candidate in candidates if candidate.chosen),
+                                   "scoring_recipe": scoring_recipe}, timings["tuner"])
+                self._cancel(req)
+
             if hybrid and "no_classical" not in req.ablate:
                 c = cfg["real"]["classical"]
-                params = EnhanceParams(c["default_gamma"], c["clahe_strength"], c["default_color_strength"])
+                params = chosen_params or EnhanceParams(c["default_gamma"], c["clahe_strength"], c["default_color_strength"])
                 with timer(timings, "classical"):
                     classical = enhance_classical(image, diagnosis, cfg, params=params,
                                                    color_enabled="no_color_correction" not in req.ablate)
@@ -283,8 +300,8 @@ class RealEngine:
                     visuals = [Visual("classical", uint8(classical.image), "stage", 768, False),
                                Visual("reflectance", uint8(classical.reflectance), "stage", 768, False)]
                 event = self._stage("classical", "Preparing the classical result",
-                                    "Applied the configured brightness and colour settings while protecting highlights.",
-                                    "Fixed no_tuner parameters.", visuals, "classical", asdict(classical.params), timings["classical"])
+                                    "Applied the selected brightness and colour settings while protecting highlights.",
+                                    "Tuner-selected parameters, or configured no_tuner parameters.", visuals, "classical", asdict(classical.params), timings["classical"])
                 story.append(StoryStep(event.title, event.caption, "classical"))
                 yield event
                 self._cancel(req)
@@ -419,7 +436,8 @@ class RealEngine:
             actual = "hybrid" if hybrid and method != "classical_fallback" else method
             timings["core_total"] = (perf_counter() - start) * 1000
             yield EnhanceResult(
-                headline, diagnosis_chips(diagnosis, recovery), diagnosis.raw, diagnosis.hotspots, recovery.summary, [], None, "not_run", checks,
+                headline, diagnosis_chips(diagnosis, recovery), diagnosis.raw, diagnosis.hotspots, recovery.summary, candidates,
+                timings.get("tuner"), scoring_recipe, checks,
                 decisions, story, metrics,
                 {"base_key": "final_preview", "L_key": "L_gray", "gamma_default": 1.0, "exposure_default": 1.0,
                  "gamma_range": [0.4, 2.5], "exposure_range": [0.25, 4.0]}, timings, warnings,

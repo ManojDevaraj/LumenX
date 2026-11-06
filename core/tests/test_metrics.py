@@ -6,7 +6,9 @@ import numpy as np
 import pytest
 
 from lumenx_core import create_engine
-from lumenx_core.metrics import chroma_delta_e
+from lumenx_core.config import load_config
+from lumenx_core.diagnose import diagnose
+from lumenx_core.metrics import chroma_delta_e, request_metrics
 
 
 @pytest.mark.parametrize("first,second,expected", [
@@ -54,3 +56,14 @@ def test_chroma_metric_ignores_gray_brightness_lift():
     first = np.full((96, 96, 3), 64, np.uint8)
     last = np.full_like(first, 128)
     assert suite.custom(first, last)["chroma_delta_e"] == pytest.approx(0, abs=0.1)
+
+
+def test_request_noise_metrics_remain_at_native_resolution():
+    """Request metrics must not report the lower sigma created by a 512px proxy."""
+    cfg = load_config()
+    rng = np.random.default_rng(61)
+    image = np.clip(0.08 + rng.normal(0, 0.015, (1080, 1920, 3)), 0, 1).astype(np.float32)
+    diagnosis = diagnose(image, np.ones(image.shape[:2], bool), cfg)
+    metrics = request_metrics(np.rint(image * 255).astype(np.uint8), np.rint(image * 255).astype(np.uint8),
+                              np.ones(image.shape[:2], bool), cfg)
+    assert metrics["noise_sigma"]["before"] == pytest.approx(diagnosis.raw["noise_sigma"], rel=0.12)

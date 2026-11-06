@@ -12,6 +12,37 @@ from .contracts import InvalidRequest
 from .diagnose import luminance, native_noise
 
 
+_CLIPIQA: Any | None = None
+_CLIPIQA_ERROR: str | None = None
+
+
+def clipiqa_batch(images: list[np.ndarray]) -> list[float] | None:
+    """Score uint8 RGB images in one CLIP-IQA forward pass when pyiqa is installed."""
+    global _CLIPIQA, _CLIPIQA_ERROR
+    if not images or _CLIPIQA_ERROR is not None:
+        return None
+    try:
+        if _CLIPIQA is None:
+            import pyiqa
+            _CLIPIQA = pyiqa.create_metric("clipiqa", device="cuda" if _cuda_available() else "cpu")
+        import torch
+        batch = torch.from_numpy(np.stack(images)).permute(0, 3, 1, 2).float().div_(255)
+        with torch.inference_mode():
+            return [float(value) for value in _CLIPIQA(batch).detach().cpu().reshape(-1)]
+    except Exception as exc:  # optional model dependency must never break processing
+        _CLIPIQA_ERROR = f"CLIP-IQA unavailable: {type(exc).__name__}."
+        return None
+
+
+def _cuda_available() -> bool:
+    """Avoid importing torch merely to report unavailable optional metrics."""
+    try:
+        import torch
+        return bool(torch.cuda.is_available())
+    except Exception:
+        return False
+
+
 def validate_metric_image(image: np.ndarray) -> None:
     """Require positive uint8 RGB metric inputs; evaluation is not size-limited."""
     if not isinstance(image, np.ndarray) or image.dtype != np.uint8 or image.ndim != 3 or image.shape[2] != 3 or min(image.shape[:2]) < 1:
@@ -135,9 +166,9 @@ class ClassicalMetricSuite:
                 "psnr_gt_mean": adjusted, "ssim": None, "lpips": None}
 
     def unpaired(self, img: np.ndarray) -> dict[str, float | None]:
-        """Expose unavailable learned/statistical IQA honestly until model integration."""
+        """Return optional CLIP-IQA plus honestly unavailable unintegrated metrics."""
         validate_metric_image(img)
-        return dict.fromkeys(("niqe", "brisque", "clipiqa", "musiq"))
+        return {"niqe": None, "brisque": None, "clipiqa": (clipiqa_batch([img]) or [None])[0], "musiq": None}
 
     def custom(self, inp: np.ndarray, out: np.ndarray) -> dict[str, float | None]:
         """Return native-resolution custom metrics; caller chooses evaluation resolution."""
@@ -161,10 +192,12 @@ class ClassicalMetricSuite:
 
     def unavailable(self) -> dict[str, str]:
         """Supply reasons for every conditionally or permanently unavailable metric."""
-        reasons = dict.fromkeys(("niqe", "brisque", "clipiqa", "musiq", "lpips", "ssim",
+        reasons = dict.fromkeys(("niqe", "brisque", "musiq", "lpips", "ssim",
                                 "err_recovered", "err_estimated", "err_unrecoverable",
                                 "recovered_pct", "estimated_pct", "unrecoverable_pct"),
                                "Not implemented in the classical-only v0.2.0 milestone.")
+        if _CLIPIQA_ERROR is not None:
+            reasons["clipiqa"] = _CLIPIQA_ERROR
         reasons.update({
             "psnr": "An exact match has infinite PSNR; returned as None.",
             "psnr_gt_mean": "Zero prediction mean or an exact adjusted match is undefined/infinite.",
@@ -177,14 +210,26 @@ class ClassicalMetricSuite:
 
 
 def request_metrics(inp: np.ndarray, out: np.ndarray, valid: np.ndarray, cfg: EngineConfig) -> dict[str, Any]:
-    """Compute the complete frozen 512-pixel request metric shape, no fake scores."""
+    """Compute proxy perceptual metrics while retaining native-resolution noise."""
     from .diagnose import proxy
 
     first, last = proxy(inp, 512), proxy(out, 512)
     mask = cv2.resize(valid.astype(np.uint8), (first.shape[1], first.shape[0]), interpolation=cv2.INTER_NEAREST).astype(bool)
     values, reasons = custom_values(first, last, cfg, mask)
+    # Downsampling smooths sensor noise. The displayed before/after values must
+    # agree with diagnosis and therefore use the same native-patch estimator.
+    native_values, native_reasons = custom_values(inp, out, cfg, valid)
+    for key in ("noise_sigma_in", "noise_sigma_out"):
+        values[key] = native_values[key]
+        reasons.pop(key, None)
+        if key in native_reasons:
+            reasons[key] = native_reasons[key]
     suite = ClassicalMetricSuite(cfg)
-    reasons.update({key: suite.unavailable()[key] for key in ("niqe", "brisque", "clipiqa", "musiq")})
+    learned_before, learned_after = suite.unpaired(first), suite.unpaired(last)
+    unavailable = suite.unavailable()
+    reasons.update({key: unavailable[key] for key in ("niqe", "brisque", "musiq")})
+    if learned_before["clipiqa"] is None:
+        reasons["clipiqa"] = unavailable.get("clipiqa", "CLIP-IQA is unavailable.")
     for suffix, field in (("in", "before"), ("out", "after")):
         if values[f"noise_sigma_{suffix}"] is None:
             reasons[f"noise_sigma.{field}"] = reasons[f"noise_sigma_{suffix}"]
@@ -194,8 +239,8 @@ def request_metrics(inp: np.ndarray, out: np.ndarray, valid: np.ndarray, cfg: En
         reasons["delta_e"] = reasons["chroma_delta_e"]
     return {
         "resolution": 512,
-        "before": dict.fromkeys(("niqe", "clipiqa", "brisque")),
-        "after": dict.fromkeys(("niqe", "clipiqa", "brisque")),
+        "before": {key: learned_before[key] for key in ("niqe", "clipiqa", "brisque")},
+        "after": {key: learned_after[key] for key in ("niqe", "clipiqa", "brisque")},
         "edge_retention": values["edge_retention"],
         "noise_sigma": {"before": values["noise_sigma_in"], "after": values["noise_sigma_out"]},
         "chroma_delta_e": values["chroma_delta_e"], "delta_e": values["chroma_delta_e"],

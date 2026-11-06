@@ -1,11 +1,29 @@
 # Changelog
 
-## 0.4.0.dev0 — in progress
+## 0.4.1 — 2026-11-07
 
-- Fixing diagnosis/noise, denoise, brightness-restraint review findings and adding
-  the 12-candidate tuner, full MetricSuite, request-time metrics and final report.
-- Tuner scoring recipe is `clipiqa+custom`; latency is reported, not a release gate.
-  Confidence-validation and live/webcam tuning are deferred by approved scope.
+- Fixed hybrid tuner proxy validity mask shape for HD/FHD inputs; request noise
+  metrics use native-resolution patch estimates.
+- Added regression coverage for 720p/1080p non-black flat/noisy hybrid on CPU and GPU.
+- Ported GPU Zero-DCE++ no-reference training, with a selectable fine-tuned weight.
+- Training credit: Mohith-D05 (PR #1), ported from the read-only snapshot.
+- GPU fine-tuning: 10 epochs total on the 485 images in LOL-v1 `our485/low`,
+  initialized from the publisher checkpoint. The first 3 epochs were resumed from
+  the checkpoint after the command session ended; subsequent seven epochs completed.
+- Fine-tuned SHA256: `90d375b5b00a2d413d0baf0e382d9dbf8128ba9e8ff30b84b797965a8a5ea65f`.
+- CPU suite: 359 passed, 13 GPU cases deselected; Ruff clean. User-confirmed prior
+  GPU run: 39 passed across hybrid, metrics and model tests.
+
+## 0.4.0 — 2026-11-06
+
+- Fixed native noise support accounting and checkerboard flatness detection; synthetic
+  flat and textured noise is measured within 20%, and denoise cannot increase it.
+- Added a deterministic 12-candidate tuner, candidate events/thumbnails, fixed-score
+  feasibility ranking, request-time metrics and learned CLIP-IQA integration.
+- Tuner recipe is `clipiqa+custom` when the optional pinned `core[iqa]` PyIQA
+  dependency is present; it records `custom_no_clipiqa` with an unavailable reason otherwise.
+- Latency is reported, not a release gate. Confidence-validation and live/webcam
+  tuning are deferred by approved scope.
 
 ## 0.3.0 — 2026-11-06
 

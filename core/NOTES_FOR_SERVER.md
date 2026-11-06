@@ -1,5 +1,12 @@
 # Notes for server integration
 
+## core-v0.4.1
+
+Hybrid proxy masks retain two dimensions at 720p/1080p; before/after noise metrics
+now use native-resolution patch estimates. `models.zerodce_checkpoint` selects
+`publisher` (default) or `finetuned`; the latter requires
+`weights/zerodce_pp_finetuned.pth` and a matching checkpoint manifest hash.
+
 ## core-v0.3.0 — GPU gates verified
 
 The RTX 2050 GPU gate is complete: all four modes passed their contracts, CIDNet
@@ -7,6 +14,14 @@ LOLv2-real and SID ran FP16 with no fallback, and native hybrid processing compl
 at 1080p and 12 MP without OOM. Tiling, fusion and one cached-deep-output repair
 were verified; resident peak VRAM was 407 MiB. v0.4 tuner and metrics work is now
 in progress. Latency remains reported rather than release-blocking by approved scope.
+
+v0.4 removes the default-hybrid `no_tuner` requirement. Hybrid emits twelve
+candidate events before its tuner event and returns the same candidates in the
+result. Candidate scores use `clipiqa+custom` when the optional `core[iqa]` PyIQA
+extra is installed; otherwise
+the result names `custom_no_clipiqa` and includes the unavailable reason. Request
+metrics now include CLIP-IQA before/after when available. No server changes are
+required.
 
 ## v0.3.0.dev0 — historical development note
 

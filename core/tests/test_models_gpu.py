@@ -74,6 +74,21 @@ def test_native_hybrid_no_oom(gpu_engine, shape):
     assert gpu_engine.health()["vram_mb"]["peak"] < gpu_engine.health()["vram_mb"]["total"]
 
 
+@pytest.mark.parametrize("shape", [(720, 1280), (1080, 1920)])
+@pytest.mark.parametrize("kind", ["flat", "noise"])
+def test_tuned_hybrid_large_nonblack_gpu_contract(gpu_engine, shape, kind):
+    """The full GPU tuner path accepts normal non-black HD and FHD inputs."""
+    rng = np.random.default_rng(62)
+    image = np.full((*shape, 3), 0.05, np.float32)
+    if kind == "noise":
+        image += rng.uniform(0, 0.1, image.shape).astype(np.float32)
+    req = EnhanceRequest(image, (shape[1], shape[0]), mode="hybrid")
+    items = list(gpu_engine.run(req))
+    assert validate_run(items, req) == []
+    assert len(items[-1].candidates) == 12
+    assert not items[-1].provenance["fallback_chain"], items[-1].warnings
+
+
 def test_live_sixty_seconds(gpu_engine):
     """Measure actual full frame-call latency for 60 seconds; do not substitute warmup FPS."""
     frame = np.full((480, 640, 3), 16, np.uint8)

@@ -8,6 +8,8 @@ from lumenx_core.config import load_config
 from lumenx_core.diagnose import diagnose
 from lumenx_core.fusion import fuse
 from lumenx_core.recoverability import estimate_recoverability
+from lumenx_core.denoise import denoise
+from lumenx_core.metrics import custom_values
 
 
 def test_weights_normalized_and_confidence_caps_deep_contribution():
@@ -55,3 +57,16 @@ def test_no_recoverability_disables_deep_confidence_modulation():
     disabled = fuse(image, deep, classical, d, r, cfg, recovery_enabled=False)
     assert np.max(enabled.weights[..., 0]) == 0
     assert np.min(disabled.weights[..., 0]) > 0
+
+
+def test_denoise_does_not_increase_measured_sensor_noise():
+    """The gain-aware path must reduce, or at minimum retain, flat-field noise."""
+    cfg = load_config()
+    rng = np.random.default_rng(31)
+    y = np.clip(0.07 + rng.normal(0, 0.015, (256, 256)), 0, 1).astype(np.float32)
+    image = np.repeat(y[..., None], 3, axis=2)
+    diagnosis = diagnose(image, np.ones(y.shape, bool), cfg)
+    recovery = estimate_recoverability(diagnosis, cfg)
+    output = denoise(image, diagnosis, recovery, cfg).image
+    values, _ = custom_values((image * 255).astype(np.uint8), (output * 255).astype(np.uint8), cfg)
+    assert values["noise_sigma_out"] <= values["noise_sigma_in"]
