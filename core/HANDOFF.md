@@ -1,4 +1,42 @@
-# Core handoff — core-v0.2.0 (approved temporary performance exception)
+# Core handoff — v0.3.0 released; v0.4.0 in progress
+
+## Current development status
+
+core-v0.2.0 was tagged on core at cd572df with the user's temporary performance
+exception. Exact measurements/exception are preserved below and in CHANGELOG.md.
+Work proceeded immediately into v0.3.0, only under core/ and on branch core.
+
+Implemented: official architectures/notices, publisher SHA256 manifest/downloader,
+once-loaded registry, measured placement preflight, precision handling, tiled
+adapters, live adapter, confidence fusion, ablations and one repair reusing cached
+deep output. Direct baselines remain unmodified; no_fusion is a postprocess bypass;
+no_recoverability removes all confidence control signals. No trained data invented.
+
+Until v0.4, hybrid explicitly requires no_tuner; otherwise EngineUnavailable before
+output. No input/contract field is changed. Full hybrid_ready remains false;
+hybrid_without_tuner_ready reflects actual loaded models. No random weights count
+as a verified model. Registry checks bytes/state dictionaries before inference.
+
+GPU gates were verified in the preceding session on the target RTX 2050: all four
+mode contracts passed, both CIDNet checkpoints ran in FP16 without fallback, and
+hybrid completed at native 1080p and 12 MP without OOM. Tiling, fusion and the
+single repair pass were exercised, with cached deep output reused. Measured peak
+resident VRAM was 407 MiB. This verifies the v0.3.0 GPU gate; latency remains a
+reported metric rather than a release gate by user-approved scope reduction.
+
+The v0.3.0 release tag is created on `core`. v0.4 work now addresses estimator,
+denoise and brightness review findings, then adds the tuner, full MetricSuite,
+request-time metrics and final report. Tuner policy is fixed at 12 candidates and
+uses `clipiqa+custom`; confidence-validation is intentionally out of scope. Webcam
+and `enhance_frame` tuning comes after the v0.4 still-image path.
+
+Top-five separate CPU profile is in bench_results.md: guidedFilter, denoise, max,
+enhance_classical and multiply. It is not the required final hybrid v0.4 profile
+and does not overwrite the original v0.2 benchmark sample or claim a speedup.
+
+---
+
+# Released core-v0.2.0 (approved temporary performance exception)
 
 ## Current status and review decision
 

@@ -1,0 +1,17 @@
+# Official checkpoints; SHA256 verified before any torch deserialization.
+# HVI files are pinned to the publisher's original immutable upload revision.
+cidnet_lolv2_real:
+  filename: cidnet_lolv2_real.pth
+  sha256: 44a7f92cf02a1da322c1a34b3aa940341dc93fd53840b7f19b49f461200b00a6
+  url: https://huggingface.co/Fediory/HVI-CIDNet/resolve/98e69f687810285d3cf863745a6f78977f262ca4/weights/LOLv2_real/best_PSNR.pth
+  license: MIT
+cidnet_sid:
+  filename: cidnet_sid.pth
+  sha256: 49678f69495610a2691bb5b2665d2766b57a6a79201a236f7afa84f67c5fec5f
+  url: https://huggingface.co/Fediory/HVI-CIDNet/resolve/98e69f687810285d3cf863745a6f78977f262ca4/weights/SID.pth
+  license: MIT
+zerodce_pp:
+  filename: zerodce_pp.pth
+  sha256: ca8855b90df9a80fa4195a831f33d3476b1964f787eb70602797c773067f3b84
+  url: https://raw.githubusercontent.com/Li-Chongyi/Zero-DCE_extension/main/Zero-DCE%2B%2B/snapshots_Zero_DCE%2B%2B/Epoch99.pth
+  license: CC-BY-NC-4.0; academic research purpose only per upstream

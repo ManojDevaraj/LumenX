@@ -148,3 +148,21 @@ def _validate_config(cfg: dict[str, Any]) -> None:
         raise ValueError("Luminance weights must be three nonnegative numbers summing to one.")
     if real["metrics"]["proxy_side"] != 512:
         raise ValueError("The frozen contract requires a 512-pixel request metric proxy.")
+    models = cfg["models"]
+    for key in ("tile_above_pixels", "tile", "stride", "zerodce_scale", "warmup_side", "live_width", "live_height"):
+        if type(models[key]) is not int or models[key] < 1:
+            raise ValueError(f"models.{key} must be a positive integer.")
+    if not 0 <= models["overlap"] < models["tile"] or models["tile"] % models["stride"]:
+        raise ValueError("Model tile/overlap/stride geometry is invalid.")
+    if models["stride"] % 8:
+        raise ValueError("Official CIDNet requires padding to a multiple of its stride eight.")
+    if models["warmup_side"] < models["tile"] or models["reserve_mb"] < 0:
+        raise ValueError("Preflight must cover the configured tile and a nonnegative reserve.")
+    if cfg["fusion"]["dark_width"] <= 0 or cfg["fusion"]["guide_epsilon"] <= 0:
+        raise ValueError("Fusion sigmoid width and smoothing epsilon must be positive.")
+    for section, key in (("fusion", "alpha"), ("fusion", "highlight_start"),
+                         ("repair", "fusion_fraction"), ("repair", "gain_fraction"), ("repair", "highlight_boost")):
+        if not 0 < cfg[section][key] <= 1:
+            raise ValueError(f"{section}.{key} must be in (0, 1].")
+    if cfg["fusion"]["highlight_start"] == 1:
+        raise ValueError("Fusion highlight start must be below 1.")

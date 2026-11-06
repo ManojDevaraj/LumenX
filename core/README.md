@@ -1,10 +1,37 @@
-# lumenx-core - v0.2.0
+# lumenx-core - v0.3.0.dev0
 
-Real CPU classical restoration plus explicit FakeEngine, using frozen contract
-v1.0. Released as core-v0.2.0 with the user's temporary CPU-performance exception.
-Original CPU limits still fail. See HANDOFF.md and bench_results.md.
+Real processing and explicit FakeEngine, using frozen contract v1.0. Latest released
+tag is core-v0.2.0 with the approved temporary CPU-performance exception. Current
+v0.3 development is not release-qualified until actual CUDA/weight gates pass.
+Original CPU limits still fail; the final full hybrid 1100 ms budget is unchanged.
 
-## Install and use
+## v0.3 development setup
+
+Architecture/wrappers, registry, tiling, fusion and cached-output repair are wired.
+From the repo root in a network-enabled terminal:
+
+```powershell
+.\core\.venv\Scripts\python.exe -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cu124
+.\core\.venv\Scripts\python.exe -m pip install einops==0.8.1
+.\core\.venv\Scripts\python.exe core/scripts/download_weights.py
+.\core\.venv\Scripts\python.exe core/scripts/warmup.py --require-models
+.\core\.venv\Scripts\python.exe -m pytest core/tests --run-gpu -q -o cache_dir=core/.pytest_cache --basetemp=core/.tmp/pytest
+```
+
+Torch index/version: https://pytorch.org/get-started/previous-versions/.
+Official URLs/full SHA256 hashes are in config/checkpoints.yaml. Default weights
+are package-relative core/weights, overridden by LUMENX_WEIGHTS_DIR. No inference
+download or per-request reconstruction occurs. Preserve upstream licence notices.
+Hybrid requires explicit ablate=frozenset({"no_tuner"}) until v0.4; do not silently
+change requests. Learned IQA is unavailable, never fabricated. Missing trained
+models have explicit classical fallback; live instead raises EngineUnavailable.
+
+349 CPU tests pass and Ruff is clean. Nine actual GPU gates are explicitly
+deselected by default. --run-gpu opts in and fails if prerequisites are missing.
+Actual weights, CUDA memory/precision and 60-second live timing remain unverified
+while Torch/einops and CIDNet files are absent. No core-v0.3.0 tag exists.
+
+## Base install and classical use
 
 Python 3.10/3.11 is required. From the monorepo root:
 
@@ -33,10 +60,10 @@ assert validate_run(items, req) == []
 print(items[-1].headline, items[-1].timings_ms)
 ```
 
-Specify classical explicitly: EnhanceRequest defaults to hybrid. Real hybrid,
-dl, zerodce and live modes raise EngineUnavailable before yielding in v0.2.0.
-Unsupported explicit GPU selection also raises; default/device=cpu uses the real
-CPU classical path. No requested neural inference silently becomes mock output.
+Specify classical explicitly: EnhanceRequest defaults to hybrid, which currently
+requires the explicit no_tuner flag. Neural modes were unavailable at the v0.2
+tag; development now uses trained models or recorded fallbacks. device=cpu forces
+CPU; default selects CUDA when available. No silent brightness mock is used.
 create_fake_engine(stage_delay_ms=0, seed=0) remains available for all four modes
 and legal ablations, with explicit fake=true, mock maps and honest surrogate/null
 quality scores. Health ready=true means classical works; hybrid_ready=false means
@@ -105,7 +132,7 @@ Fake stage delay is for UI demonstration, not a GPU timing measurement.
 .\core\.venv\Scripts\python.exe core/scripts/bench.py --images 20 --passes 3 --check-gates
 ```
 
-325 CPU tests pass and Ruff is clean. Coverage includes both engines, every legal
+349 CPU tests pass and Ruff is clean. Coverage includes both engines, every legal
 fake flag combination, malformed output rejection, real tiny/odd/black/gray/bright/
 noisy/coloured/transparent inputs, actual gain limits, native noise accuracy,
 reference colour pairs, injected guardrail damage, config isolation, determinism,

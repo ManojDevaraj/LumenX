@@ -6,6 +6,16 @@ from .contracts import Chip, GuardrailCheck
 from .types import ClassicalResult, DiagnosisResult, RecoveryResult
 
 
+def diagnosis_chips(diagnosis: DiagnosisResult, recovery: RecoveryResult) -> list[Chip]:
+    """Share factual diagnosis chips across classical, direct and hybrid outputs."""
+    raw = diagnosis.raw
+    severity = raw["severity"]
+    level = {"extreme": "high", "severe": "high", "moderate": "med", "mild": "low"}[severity]
+    return [Chip(f"{severity.capitalize()} low light", raw["median_y"], level),
+            Chip("Weak recorded light", recovery.summary["unrecoverable_pct"], "med"),
+            Chip("Noise estimate support", raw["noise_estimator_confidence"], "low" if raw["noise_estimator_confidence"] else "high")]
+
+
 def classical_report(diagnosis: DiagnosisResult, recovery: RecoveryResult, classical: ClassicalResult,
                      checks: list[GuardrailCheck]) -> tuple[str, list[Chip], list[str]]:
     """Return headline, severity chips and four to seven evidence-backed decisions."""
@@ -17,10 +27,7 @@ def classical_report(diagnosis: DiagnosisResult, recovery: RecoveryResult, class
         headline = "This image is already well lit; its appearance was preserved."
     else:
         headline = f"{severity.capitalize()} low light with {len(diagnosis.hotspots)} bright areas; shadow brightening was limited by recorded signal."
-    level = {"extreme": "high", "severe": "high", "moderate": "med", "mild": "low"}[severity]
-    chips = [Chip(f"{severity.capitalize()} low light", raw["median_y"], level),
-             Chip("Weak recorded light", recovery.summary["unrecoverable_pct"], "med"),
-             Chip("Noise estimate support", raw["noise_estimator_confidence"], "low" if raw["noise_estimator_confidence"] else "high")]
+    chips = diagnosis_chips(diagnosis, recovery)
     decisions = [
         "Used classical image processing; no trained restoration model was loaded.",
         ("Kept the already-bright appearance unchanged." if raw["already_bright"]

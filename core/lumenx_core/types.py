@@ -60,3 +60,25 @@ class DenoiseResult:
     image: np.ndarray
     gain: np.ndarray
     strength: np.ndarray
+
+
+@dataclass(frozen=True)
+class DeepResult:
+    """Output/provenance of an actual model or an explicit classical fallback request."""
+
+    image: np.ndarray | None
+    method: str
+    checkpoint: str | None
+    checkpoint_hash: str | None
+    device: str
+    precision: str
+    fallback_chain: list[str]
+    warnings: list[Any]
+
+
+@dataclass(frozen=True)
+class FusionResult:
+    """Hybrid output and nonnegative normalized deep/classical/safe weights."""
+
+    image: np.ndarray
+    weights: np.ndarray

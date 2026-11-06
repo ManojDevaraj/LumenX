@@ -115,6 +115,9 @@ real:
     # Partial grey-world chroma correction capped to preserve the scene mood.
     color_max_strength: 0.2
     color_scale: 35.0
+    # Explicit no_tuner hybrid defaults, not an unreported diagnosis-based search.
+    default_gamma: 0.6
+    default_color_strength: 0.1
   denoise:
     # Three guided-filter strengths share the input luminance guide and radius.
     radius: 4
@@ -124,6 +127,8 @@ real:
     # Gain-aware noise normalization, multiplicative strength and confidence boost.
     sigma_reference: 0.08
     k: 0.35
+    # Uniform-denoise ablation strength; retains independent gain enforcement.
+    uniform_strength: 0.35
     confidence_boost: 0.35
     # Chroma receives this fraction of the luminance correction.
     chroma_strength: 0.7
@@ -163,3 +168,38 @@ real:
     overlay_alpha: 0.45
     # Low/middle/high-confidence RGBA overlay colours (RGB only; alpha above).
     recovery_colors: [[220, 50, 47], [230, 160, 30], [40, 180, 90]]
+
+# Model integration: loaded once; no request-time network access.
+models:
+  # Above one megapixel, process CPU-staged tiles with one model activation at a time.
+  tile_above_pixels: 1000000
+  tile: 512
+  overlap: 32
+  stride: 8
+  # Default Zero-DCE++ predicts curves at native scale; tuned only with measured evidence.
+  zerodce_scale: 1
+  # Bytes held free after startup's measured worst-tile probe.
+  reserve_mb: 512
+  # Preflight probe sizes for the required CIDNet tile and live model.
+  warmup_side: 512
+  live_width: 640
+  live_height: 480
+  # Serialization gives deterministic kernels on the pinned hardware/software stack.
+  deterministic: true
+fusion:
+  # Darkness sigmoid midpoint/width and global deep contribution bias.
+  dark_threshold: 0.2
+  dark_width: 0.08
+  alpha: 0.7
+  # Safe-path gain and highlight transition.
+  safe_gamma: 0.9
+  highlight_start: 0.8
+  # Proxy guided-weight smoothing settings; all maps are upsampled and normalized.
+  proxy_side: 512
+  guide_radius: 7
+  guide_epsilon: 0.001
+repair:
+  # One repair only: reduced deep bias and stronger spatial safe weights/gain limits.
+  fusion_fraction: 0.5
+  gain_fraction: 0.75
+  highlight_boost: 0.75

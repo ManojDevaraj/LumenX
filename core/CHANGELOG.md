@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.4.0.dev0 — in progress
+
+- Fixing diagnosis/noise, denoise, brightness-restraint review findings and adding
+  the 12-candidate tuner, full MetricSuite, request-time metrics and final report.
+- Tuner scoring recipe is `clipiqa+custom`; latency is reported, not a release gate.
+  Confidence-validation and live/webcam tuning are deferred by approved scope.
+
+## 0.3.0 — 2026-11-06
+
+- GPU release gates verified on the RTX 2050: all four mode contracts, both CIDNet
+  checkpoints in FP16 with no fallback, and hybrid at 1080p and 12 MP without OOM.
+- Verified cosine tiling, fusion and the bounded single repair reusing cached deep
+  output. Resident peak VRAM was 407 MiB.
+- Latency is retained as a reported metric rather than a v0.3 release gate.
+
+## 0.3.0.dev0 — superseded by 0.3.0
+
+- Official CIDNet/Zero-DCE++ architectures with provenance/licence notices.
+- SHA256 manifest/downloader and verified official Zero-DCE++ checkpoint.
+- Cosine tiling, stride padding, native-size output and cancellation.
+- Once-loaded registry with measured resident/swap preflight and original CPU
+  weight snapshots. Finite-output checking allows one FP32 retry; precision-
+  sensitive HVI/attention normalization use FP32 without changing layers/state names.
+- Direct baselines, confidence-bounded fusion, hybrid denoise and a single repair
+  using cached deep output. Until v0.4, hybrid requires explicit no_tuner.
+- 349 CPU tests pass; nine real-GPU gates explicitly deselected by default.
+  --run-gpu opts in; missing prerequisites FAIL rather than silently skip.
+- Torch/einops and both CIDNet files remain absent in the visible setup. No
+  core-v0.3.0 tag, trained-output or GPU performance claim is made.
+- Separate top-five CPU function profile appended to bench_results.md; the
+  required final hybrid v0.4 profile/1100 ms p95 budget remain unchanged.
+
 ## 0.2.0 — 2026-11-06, temporary performance exception approved
 
 - Real CPU classical Engine with contract-valid ordered stages and report.

@@ -53,7 +53,7 @@ def test_each_mode_passes_contract(mode):
     items = list(stream)
     assert validate_run(items, req) == []
     result = result_of(items)
-    assert result.provenance["core_version"] == lumenx_core.__version__ == "0.2.0"
+    assert result.provenance["core_version"] == lumenx_core.__version__
     assert result.provenance["contract_version"] == CONTRACT_VERSION == "1.0"
     assert len(result.candidates) == (12 if mode == "hybrid" else 0)
     assert len(result.decisions) in range(4, 8)
