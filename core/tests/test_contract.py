@@ -25,7 +25,6 @@ from lumenx_core.contracts import (
     Cancelled,
     EnhanceRequest,
     EnhanceResult,
-    EngineUnavailable,
     StageEvent,
     Visual,
 )
@@ -54,7 +53,7 @@ def test_each_mode_passes_contract(mode):
     items = list(stream)
     assert validate_run(items, req) == []
     result = result_of(items)
-    assert result.provenance["core_version"] == lumenx_core.__version__ == "0.1.0"
+    assert result.provenance["core_version"] == lumenx_core.__version__ == "0.2.0"
     assert result.provenance["contract_version"] == CONTRACT_VERSION == "1.0"
     assert len(result.candidates) == (12 if mode == "hybrid" else 0)
     assert len(result.decisions) in range(4, 8)
@@ -137,8 +136,7 @@ def test_health_config_and_warmup():
     assert engine.health()["warm"] is True
     json.dumps(health, allow_nan=False)
     json.dumps(engine.public_config(), allow_nan=False)
-    with pytest.raises(EngineUnavailable, match="not shipped"):
-        create_engine()
+    assert create_engine().health()["fake"] is False
 
 
 def test_frame_and_metric_suite():

@@ -38,3 +38,128 @@ fake:
     color_shift: 12.0
     detail_loss: 0.7
     halo: 0.1
+
+# Real classical engine settings. All numerical thresholds are normalized RGB units
+# unless their comments specify percentages, pixels, Lab units, or SNR ratios.
+real:
+  # Fixed OpenCV worker count bounds CPU contention and improves repeatability.
+  threads: 4
+  # Denominator floor used throughout float32 processing.
+  epsilon: 0.000001
+  # BT.709 luminance on normalized RGB, matching model input domain.
+  luminance_weights: [0.2126, 0.7152, 0.0722]
+  diagnosis:
+    # Long-side limit for illumination, structure and colour diagnosis.
+    proxy_side: 512
+    # Native-resolution patch width, accepted sample limit, confidence sample count.
+    noise_block: 32
+    noise_samples: 100
+    minimum_patches: 25
+    # Mean absolute Sobel gradient limit when accepting a noise patch.
+    flat_gradient: 0.12
+    # Required fraction of visible pixels in a sampled native patch.
+    patch_valid_fraction: 0.95
+    # Gaussian MAD consistency constant and high-pass filter noise norm.
+    mad_scale: 0.6744897501960817
+    laplacian_norm: 6.0
+    # Local SNR averaging window in processed-image pixels.
+    mean_window: 15
+    # Illumination guided-filter parameters, on the proxy.
+    guide_radius: 15
+    guide_epsilon: 0.001
+    # Fraction thresholds for crushed shadows and channel clipping.
+    crushed_threshold: 0.05
+    shadow_clip: 0.02
+    highlight_clip: 0.98
+    # Hotspot illumination cutoff and minimum connected-component proxy area.
+    hotspot_threshold: 0.85
+    hotspot_min_area: 4
+    # Reliable midtone mask and chroma cast significance in OpenCV float Lab.
+    midtone_low: 0.08
+    midtone_high: 0.8
+    cast_threshold: 6.0
+    # Median luminance severity boundaries in increasing order.
+    severity_extreme: 0.035
+    severity_severe: 0.09
+    severity_moderate: 0.2
+    # Identity route requires dark percentile, median and crushed-area agreement.
+    bright_p05: 0.12
+    bright_median: 0.35
+    bright_crushed_pct: 1.0
+  recoverability:
+    # Input SNR transition and low-confidence estimator floor.
+    snr_low: 2.0
+    snr_high: 8.0
+    confidence_floor: 0.25
+    # Joint darkness and local variance thresholds; one zero channel is insufficient.
+    black_luminance: 0.02
+    black_variance: 0.000004
+    # Proxy guided smoothing and display class boundaries.
+    guide_radius: 7
+    guide_epsilon: 0.001
+    class_low: 0.25
+    class_high: 0.75
+    # Maximum actual output luminance gain at weak and strong confidence.
+    gain_low: 2.0
+    gain_high: 12.0
+  classical:
+    # Adaptive gamma by measured severity; already-bright inputs use identity.
+    gamma: {extreme: 0.35, severe: 0.45, moderate: 0.6, mild: 0.8}
+    # Blend adjusted illumination back to original above this cutoff.
+    highlight_start: 0.8
+    # Conservative partial CLAHE on Lab lightness, with small-image bypass.
+    clahe_clip: 2.0
+    clahe_tiles: 8
+    clahe_strength: 0.2
+    minimum_clahe_side: 16
+    # Partial grey-world chroma correction capped to preserve the scene mood.
+    color_max_strength: 0.2
+    color_scale: 35.0
+  denoise:
+    # Three guided-filter strengths share the input luminance guide and radius.
+    radius: 4
+    # Fast Guided Filter computes coefficients at half-scale and evaluates at full size.
+    filter_scale: 0.5
+    epsilons: [0.0001, 0.001, 0.01]
+    # Gain-aware noise normalization, multiplicative strength and confidence boost.
+    sigma_reference: 0.08
+    k: 0.35
+    confidence_boost: 0.35
+    # Chroma receives this fraction of the luminance correction.
+    chroma_strength: 0.7
+    # Reliable edge protection: gradient cutoff and remaining filter fraction.
+    edge_threshold: 0.08
+    edge_strength_fraction: 0.2
+    # Below this measured noise sigma, filtering is bypassed (gain caps still apply).
+    minimum_sigma: 0.001
+  metrics:
+    # Frozen request-time metric resolution and reliable-structure mask thresholds.
+    proxy_side: 512
+    minimum_edges: 16
+    gradient_threshold: 0.02
+    reliable_snr: 8.0
+    midtone_low: 0.08
+    midtone_high: 0.8
+    # Small numerical floor for undefined correlations.
+    variance_epsilon: 0.00000001
+    # Hotspot-ring radius and high quantile of new local brightening overshoot.
+    halo_radius: 3
+    halo_quantile: 0.95
+    # Chroma-only CIEDE2000 compares both colours at equal reference lightness.
+    reference_lightness: 50.0
+  guardrails:
+    # Overexposure fails only when both absolute and incremental percentages exceed limits.
+    clip_absolute_pct: 2.0
+    clip_increment_pct: 0.5
+    # Maximum chroma-only CIEDE2000, minimum edge correlation and maximum halo residual.
+    color_shift: 12.0
+    edge_retention: 0.7
+    halo: 0.08
+  render:
+    # Perceptual map display scales; rendering never changes numerical controls.
+    snr_max: 16.0
+    noise_max: 0.08
+    gain_max: 12.0
+    overlay_alpha: 0.45
+    # Low/middle/high-confidence RGBA overlay colours (RGB only; alpha above).
+    recovery_colors: [[220, 50, 47], [230, 160, 30], [40, 180, 90]]

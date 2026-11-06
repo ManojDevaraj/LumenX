@@ -1,10 +1,10 @@
-"""Public LumenX engine factories; v0.1.0 ships the CPU fake engine only."""
+"""Public factories for the real classical engine and explicitly selected CPU fake."""
 
 from __future__ import annotations
 
 import cv2
 
-from .contracts import Engine, EngineUnavailable
+from .contracts import Engine
 
 if not hasattr(cv2, "ximgproc") or not hasattr(cv2.ximgproc, "guidedFilter"):
     raise ImportError(
@@ -12,16 +12,15 @@ if not hasattr(cv2, "ximgproc") or not hasattr(cv2.ximgproc, "guidedFilter"):
         "opencv-contrib-python dependency and remove other OpenCV wheels."
     )
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __all__ = ["__version__", "create_engine", "create_fake_engine"]
 
 
 def create_engine(config_path: str | None = None, device: str | None = None) -> Engine:
-    """Refuse real inference until a release implementing RealEngine is installed."""
-    raise EngineUnavailable(
-        "RealEngine is not shipped in core-v0.1.0. "
-        "Use create_fake_engine() explicitly for mock development."
-    )
+    """Create a real CPU classical engine; unsupported modes fail on run()."""
+    from .engine import RealEngine
+
+    return RealEngine(config_path=config_path, device=device)
 
 
 def create_fake_engine(stage_delay_ms: int = 0, seed: int = 0) -> Engine:

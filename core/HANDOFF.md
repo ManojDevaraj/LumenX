@@ -1,4 +1,59 @@
-# Core handoff — core-v0.1.0
+# Core handoff — core-v0.2.0 (approved temporary performance exception)
+
+## Current status and review decision
+
+The user explicitly approved tagging core-v0.2.0 with a documented temporary CPU
+performance exception and instructed v0.3.0 to start immediately afterward. Work
+remains on core and inside core/; frozen contract, server, main and references
+are unchanged. Functional gates pass; the original CPU timing gates still fail.
+
+Completed: native-patch noise/confidence, illumination/SNR/cast/hotspots/clipping,
+input-based recovery, adaptive Retinex/partial Lab CLAHE/colour, three-strength
+guided denoising, actual gain enforcement, real custom metrics, audit checks,
+full-size map/report/story/alpha output, frozen config, debug CLI and benchmark.
+FakeEngine remains compatible. Learned IQA is null with reasons; no trained model
+is present. Neural/live requests fail before output. Classical has no tuner and
+guardrails are audit-only as required for v0.2.0.
+
+Validation: **325 CPU tests passed; Ruff passed**. New cases cover reference colour
+pairs, injected audit failures, native noise accuracy, actual gain caps, alpha
+isolation, neutral RGB preservation and tiny OpenCV scalar/filter corner cases.
+Developer CLI smoke test completed; synthetic input/final were visually inspected.
+This is not a real-photo quality evaluation or a GPU test run.
+
+Benchmark: core/bench_results.md; 20 synthetic 1920x1080 cases x three warm passes.
+Diagnosis p95 **51.28 ms** (limit <30), numerical p95 **582.47 ms** (limit <100),
+complete core p95 **830.55 ms**, peak RAM about 502 MiB. CPU only; no RTX/CUDA,
+neural, live or end-to-end server timing claim.
+
+Optimizations without resolution/stage cuts: OpenCV image/channel operations,
+8-bit Lab histogram operations, fixed threading, official Fast Guided Filter
+coefficients with full-resolution evaluation, a proven native-max highlight
+bypass, and no-noise/bright denoise bypass retaining actual gain enforcement.
+No pre-approved hybrid performance lever applied; no silent scoring cuts.
+
+The user's latest approval supersedes the original no-failed-gate-tag rule only
+for the v0.2.0 CPU timing exception. It does not reclassify measurements as passes.
+Before core-v0.4.0 the full warm hybrid core_total <=1100 ms p95 at 1080p remains
+mandatory, including CPU stages. GPU model integration does not fix those costs.
+No contract change or quality/resolution reduction was approved. Dependency pins
+are unchanged. bench_results.md embeds observed v0.2 health and timing details.
+
+## Binding v0.4 performance work (latest user instruction)
+
+1. Compute all guided filters at proxy resolution, then upsample (fast guided filter).
+2. Keep the hot path float32, use OpenCV rather than skimage, call cv2.setNumThreads(0).
+3. Compute Lab/luminance conversions and box-filter statistics once; reuse across stages.
+4. Bound native noise sampling to the configured patch budget using vectorized extraction.
+5. Profile per function and record the top five hotspots in bench_results.md.
+
+These requirements must be verified before v0.4.0; the exception is temporary.
+Continue v0.3.0 model registry/wrappers, tiling, live inference, fusion and one
+bounded cached-output repair now. No automatic waiver for v0.3 GPU/weight gates.
+
+---
+
+# Archived handoff — core-v0.1.0
 
 ## Status
 

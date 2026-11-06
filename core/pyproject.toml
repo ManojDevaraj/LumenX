@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lumenx-core"
-version = "0.1.0"
-description = "LumenX contract v1.0 and deterministic CPU fake engine"
+version = "0.2.0"
+description = "LumenX classical restoration engine and frozen array contract"
 readme = "README.md"
 requires-python = ">=3.10,<3.12"
 dependencies = [
