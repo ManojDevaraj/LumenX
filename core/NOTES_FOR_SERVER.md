@@ -1,5 +1,23 @@
 # Notes for server integration
 
+## v0.3.0.dev0 — development only; GPU gates pending
+
+Latest released tag is core-v0.2.0. Branch code now wires registry/wrappers, tiled
+inference, direct baselines, confidence fusion, live and one cached-output repair.
+Optional model dependencies are pinned; no request/startup downloads occur.
+
+Before v0.4, hybrid requires explicit ablate=frozenset({"no_tuner"}). Default
+hybrid raises EngineUnavailable before output; do not silently change requests.
+Frozen stage table is unchanged; candidates=[] when no tuner runs. Health adds
+hybrid_requires_no_tuner and hybrid_without_tuner_ready; full hybrid_ready=false.
+Inspect actual method/fallback_chain: missing trained weights may explicitly
+degrade dl/zerodce to classical_fallback. Live never becomes a gamma mock.
+
+349 CPU tests pass with nine actual GPU gates deselected, not claimed passing.
+Torch/einops and CIDNet weights are still absent in the visible setup. No v0.3
+tag or GPU claims. No contract/server changes. The temporary v0.2 exception does
+not relax CPU cost accounting or the final full hybrid 1100 ms p95 target.
+
 ## core-v0.2.0 — temporary CPU-performance exception approved
 
 create_engine(device="cpu") now returns real classical processing. Request

@@ -22,11 +22,17 @@ def choose_params(diagnosis: DiagnosisResult, cfg: EngineConfig) -> EnhanceParam
     return EnhanceParams(float(c["gamma"][diagnosis.raw["severity"]]), float(clahe), float(color))
 
 
-def enhance_classical(image: np.ndarray, diagnosis: DiagnosisResult, cfg: EngineConfig) -> ClassicalResult:
+def enhance_classical(image: np.ndarray, diagnosis: DiagnosisResult, cfg: EngineConfig, *,
+                      params: EnhanceParams | None = None, color_enabled: bool = True) -> ClassicalResult:
     """Decompose/recompose light, protect highlights, then apply partial Lab changes."""
     c = cfg["real"]["classical"]
     epsilon = cfg["real"]["epsilon"]
-    params = choose_params(diagnosis, cfg)
+    from dataclasses import replace
+
+    if params is None or diagnosis.raw["already_bright"] or diagnosis.raw["empty_visible_area"]:
+        params = choose_params(diagnosis, cfg)
+    if not color_enabled:
+        params = replace(params, color_strength=0.0)
     light = diagnosis.illumination
     light_rgb = cv2.merge([np.maximum(light, epsilon)] * 3)
     reflectance = cv2.divide(image, light_rgb)

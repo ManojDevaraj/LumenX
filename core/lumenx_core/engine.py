@@ -1,8 +1,8 @@
-"""Real classical-only v0.2 engine: array events, no transport, storage or scheduling."""
+"""Real restoration engine: array events, no transport, storage or scheduling."""
 
 from __future__ import annotations
 
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from hashlib import sha256
 from time import perf_counter
 from typing import Any, Iterator
@@ -17,26 +17,30 @@ from .contracts import (CONTRACT_VERSION, Cancelled, EngineError, EngineUnavaila
 from .denoise import denoise
 from .diagnose import diagnose
 from .guardrails import audit
+from .fusion import fuse
 from .metrics import ClassicalMetricSuite, request_metrics
 from .recoverability import estimate_recoverability
+from .recoverability import enforce_gain
 from .render import colormap, diagnosis_visuals, final_visuals, recovery_visual, uint8
-from .report import classical_report
+from .report import classical_report, diagnosis_chips
 from .timing import timer
 from .validation import validate_request
+from .types import DenoiseResult, EnhanceParams
 
 
 class RealEngine:
-    """CPU classical restoration; unsupported neural modes fail before any yield."""
+    """Classical, direct trained baselines, and explicit no_tuner hybrid processing."""
 
     def __init__(self, config_path: str | None = None, device: str | None = None) -> None:
         """Load immutable configuration once; do not download or instantiate models."""
-        if device not in (None, "cpu"):
-            raise EngineUnavailable("v0.2.0 supports CPU classical processing only; use device='cpu'.")
         try:
             self._cfg: EngineConfig = load_config(config_path)
         except (OSError, TypeError, ValueError) as exc:
             raise EngineError(f"Invalid engine configuration: {exc}") from exc
         cv2.setNumThreads(self._cfg["real"]["threads"])
+        from .models.registry import ModelRegistry
+
+        self._registry = ModelRegistry(self._cfg, device)
         self._warm = False
 
     def warmup(self) -> None:
@@ -45,6 +49,7 @@ class RealEngine:
             image = np.full((32, 32, 3), 0.1, np.float32)
             for _ in self.run(EnhanceRequest(image, (32, 32), mode="classical")):
                 pass
+            self._registry.warmup()
             self._warm = True
 
     def public_config(self) -> dict[str, Any]:
@@ -56,26 +61,34 @@ class RealEngine:
         return ClassicalMetricSuite(self._cfg)
 
     def health(self) -> dict[str, Any]:
-        """Distinguish available classical processing from absent hybrid/live/IQA models."""
+        """Report actual loaded checkpoints; full tuner readiness remains separate."""
         from . import __version__
 
+        registry = self._registry
+        checkpoints = [key for key in registry.runners if key.startswith("cidnet")]
         return {
             "fake": False, "ready": True, "hybrid_ready": False, "warm": self._warm,
-            "device": "cpu", "placement_policy": "resident", "modes": ["classical"],
-            "models": {"cidnet": {"available": False, "checkpoints": []},
-                       "zerodce": {"available": False},
+            "device": registry.device, "placement_policy": registry.policy,
+            "modes": ["classical", "dl", "zerodce", "hybrid"],
+            "hybrid_requires_no_tuner": True,
+            "hybrid_without_tuner_ready": bool(checkpoints or "zerodce_pp" in registry.runners),
+            "models": {"cidnet": {"available": bool(checkpoints), "checkpoints": checkpoints},
+                       "zerodce": {"available": "zerodce_pp" in registry.runners},
                        "iqa": dict.fromkeys(("clipiqa", "niqe", "brisque", "musiq", "lpips"), False)},
-            "vram_mb": {"total": 0, "allocated": 0, "reserved": 0, "peak": 0},
-            "degraded": ["neural_modes_unavailable", "iqa_unavailable", "guardrails_audit_only"],
+            "vram_mb": registry.memory(),
+            "degraded": (["tuner_unavailable", "iqa_unavailable"]
+                         + [f"{key}:{reason}" for key, reason in registry.errors.items()]
+                         + [warning.code for warning in registry.warnings]),
             "core_version": __version__, "contract_version": CONTRACT_VERSION,
         }
 
     def enhance_frame(self, frame: np.ndarray) -> np.ndarray:
-        """Refuse live processing until the actual Zero-DCE++ wrapper is released."""
+        """Run the shared verified Zero-DCE++ model, without a silent gamma substitute."""
         from .validation import validate_rgb
 
         validate_rgb(frame, floating=False)
-        raise EngineUnavailable("Real live enhancement requires the Zero-DCE++ release (v0.3.0).")
+        result = self._registry.enhance_frame(frame.astype(np.float32) / 255)
+        return uint8(result)
 
     @staticmethod
     def _cancel(req: EnhanceRequest) -> None:
@@ -84,14 +97,21 @@ class RealEngine:
             raise Cancelled("Enhancement cancelled.")
 
     def run(self, req: EnhanceRequest) -> Iterator[RunItem]:
-        """Yield real classical stages and exactly one terminal EnhanceResult."""
+        """Validate once, then dispatch; explicit no_tuner is required until v0.4.0."""
+        start = perf_counter()
+        validate_request(req)
+        self._cancel(req)
+        if req.mode == "hybrid" and "no_tuner" not in req.ablate:
+            raise EngineUnavailable("The tuner arrives in v0.4.0; request hybrid with explicit no_tuner meanwhile.")
+        if req.mode == "classical":
+            yield from self._run_classical(req, start)
+        else:
+            yield from self._run_neural(req, start)
+
+    def _run_classical(self, req: EnhanceRequest, start: float) -> Iterator[RunItem]:
+        """Retain the validated v0.2 classical path independently of model availability."""
         from . import __version__
 
-        validate_request(req)
-        if req.mode != "classical":
-            raise EngineUnavailable(f"Mode {req.mode!r} requires the neural-engine release (v0.3.0).")
-        self._cancel(req)
-        start = perf_counter()
         timings: dict[str, float] = {}
         owned: list[Any] = []
         story: list[StoryStep] = []
@@ -203,6 +223,221 @@ class RealEngine:
         finally:
             owned.clear()
             # GeneratorExit discards the frame and all remaining local arrays.
+
+    def _run_neural(self, req: EnhanceRequest, start: float) -> Iterator[RunItem]:
+        """Run direct trained baselines or no_tuner hybrid, with one cached-output repair."""
+        from . import __version__
+        from .diagnose import luminance
+
+        cfg = self._cfg
+        timings: dict[str, float] = {}
+        warnings = [EngineWarning("iqa_unavailable", "Learned quality measurements are not loaded in this release.")]
+        story: list[StoryStep] = []
+        hybrid = req.mode == "hybrid"
+        recovery_enabled = "no_recoverability" not in req.ablate
+        no_fusion = "no_fusion" in req.ablate
+        audit_only = not hybrid or no_fusion or "no_guardrails" in req.ablate
+        deep_result = classical = None
+        repair_attempted = False
+        fallback_audit: list[dict[str, Any]] = []
+        try:
+            valid = np.ones(req.image.shape[:2], bool) if req.alpha is None else req.alpha > 0
+            image = req.image
+            if not np.all(valid):
+                image = image.copy()
+                image[~valid] = 0
+            with timer(timings, "diagnose"):
+                diagnosis = diagnose(image, valid, cfg)
+            with timer(timings, "render"):
+                visuals = diagnosis_visuals(diagnosis, cfg)
+            event = self._stage("diagnose", "Finding the recorded light",
+                                "Measured the recorded light and noise before selecting the restoration path.",
+                                "Native-patch noise; input-only diagnosis.", visuals, "illumination", diagnosis.raw, timings["diagnose"])
+            story.append(StoryStep(event.title, event.caption, "illumination"))
+            yield event
+            self._cancel(req)
+            if hybrid:
+                warnings.append(EngineWarning("tuner_disabled", "Your no_tuner request uses the configured fixed parameters."))
+            for warning in warnings:
+                yield StageEvent("warning", warning.code, "Processing limitation", warning.message, "", [], None, asdict(warning), 0.0)
+                self._cancel(req)
+            with timer(timings, "recoverability"):
+                recovery = estimate_recoverability(diagnosis, cfg)
+            with timer(timings, "render"):
+                visual = recovery_visual(recovery, valid, cfg)
+            event = self._stage("recoverability", "Locating weak recorded signal",
+                                "Estimated signal confidence limits brightening unless that control was explicitly disabled.",
+                                "SNR, estimator support and joint near-black variance.", [visual], visual.key,
+                                recovery.summary, timings["recoverability"])
+            story.append(StoryStep(event.title, event.caption, visual.key))
+            yield event
+            self._cancel(req)
+
+            if hybrid and "no_classical" not in req.ablate:
+                c = cfg["real"]["classical"]
+                params = EnhanceParams(c["default_gamma"], c["clahe_strength"], c["default_color_strength"])
+                with timer(timings, "classical"):
+                    classical = enhance_classical(image, diagnosis, cfg, params=params,
+                                                   color_enabled="no_color_correction" not in req.ablate)
+                with timer(timings, "render"):
+                    visuals = [Visual("classical", uint8(classical.image), "stage", 768, False),
+                               Visual("reflectance", uint8(classical.reflectance), "stage", 768, False)]
+                event = self._stage("classical", "Preparing the classical result",
+                                    "Applied the configured brightness and colour settings while protecting highlights.",
+                                    "Fixed no_tuner parameters.", visuals, "classical", asdict(classical.params), timings["classical"])
+                story.append(StoryStep(event.title, event.caption, "classical"))
+                yield event
+                self._cancel(req)
+            deep_image = None
+            if not hybrid or "no_dl" not in req.ablate:
+                with timer(timings, "deep"):
+                    deep_result = self._registry.infer(image, diagnosis.raw["severity"],
+                                                       zerodce=req.mode == "zerodce", cancel=req.cancel)
+                    deep_image = deep_result.image
+                    if deep_image is None:
+                        if hybrid and "no_classical" in req.ablate:
+                            raise EngineUnavailable("No trained fallback is available and classical processing was explicitly disabled.")
+                        deep_image = classical.image if classical is not None else enhance_classical(image, diagnosis, cfg).image
+                warnings.extend(deep_result.warnings)
+                for warning in deep_result.warnings:
+                    yield StageEvent("warning", warning.code, "Restoration limitation",
+                                     "A processing limitation was recorded; the available safe path was used.",
+                                     warning.message, [], None, asdict(warning), 0.0)
+                    self._cancel(req)
+                with timer(timings, "render"):
+                    visual = Visual("deep", uint8(deep_image), "stage", 768, False)
+                event = self._stage("deep", "Running the restoration path",
+                                    "Used the recorded model or its explicitly reported fallback at the original image size.",
+                                    "Sequential tiled inference above one megapixel.", [visual], "deep",
+                                    {"actual_method": deep_result.method, "checkpoint": deep_result.checkpoint,
+                                     "fallback_chain": deep_result.fallback_chain}, timings["deep"])
+                story.append(StoryStep(event.title, event.caption, "deep"))
+                yield event
+                self._cancel(req)
+            output = deep_image
+            classical_image = classical.image if classical is not None else None
+            if hybrid and not no_fusion:
+                with timer(timings, "fusion"):
+                    fused = fuse(image, deep_image, classical_image, diagnosis, recovery, cfg,
+                                 recovery_enabled=recovery_enabled)
+                output = fused.image
+                with timer(timings, "render"):
+                    visuals = [Visual("fused", uint8(output), "stage", 768, False),
+                               Visual("fusion_map", uint8(fused.weights), "map", 512, True)]
+                event = self._stage("fusion", "Combining the available evidence",
+                                    "Mixed restoration paths using recorded signal confidence and protected bright areas.",
+                                    "Input-guided normalized classical/deep/safe weights.", visuals, "fused", {}, timings["fusion"])
+                story.append(StoryStep(event.title, event.caption, "fused"))
+                yield event
+                self._cancel(req)
+            if hybrid:
+                with timer(timings, "denoise"):
+                    if no_fusion:
+                        # The no_fusion baseline remains direct deep output; table still requires this stage.
+                        gain = luminance(output, cfg) / np.maximum(diagnosis.luminance, cfg["real"]["epsilon"])
+                        denoised = DenoiseResult(output, gain, np.zeros_like(gain))
+                    else:
+                        denoised = denoise(output, diagnosis, recovery, cfg, recovery_enabled=recovery_enabled,
+                                           uniform="no_gain_denoise" in req.ablate)
+                    output = denoised.image
+                with timer(timings, "render"):
+                    visuals = [Visual("denoised", uint8(output), "stage", 768, False),
+                               Visual("gain", colormap(denoised.gain, cfg["real"]["render"]["gain_max"]), "map", 512, True),
+                               Visual("denoise_strength", uint8(denoised.strength), "map", 512, True)]
+                caption = "Preserved the direct model baseline without postprocessing." if no_fusion else "Matched noise control to amplification and enforced the enabled local gain limits."
+                event = self._stage("denoise", "Controlling amplified noise", caption,
+                                    "Uniform denoise only for no_gain_denoise; no_recoverability removes all confidence controls.",
+                                    visuals, "denoised", {"bypassed": no_fusion}, timings["denoise"])
+                story.append(StoryStep(event.title, event.caption, "denoised"))
+                yield event
+                self._cancel(req)
+            if output is None:
+                raise EngineError("No valid restoration contributor was produced.")
+            with timer(timings, "metrics"):
+                metrics = request_metrics(uint8(image), uint8(output), valid, cfg)
+            with timer(timings, "guardrails"):
+                checks = audit(metrics, output, diagnosis, cfg)
+            failed = [check.check for check in checks if check.passed is False]
+            if failed and not audit_only:
+                repair_attempted = True
+                checks = [replace(check, action="Reduced deep contribution, highlight gain and local amplification.") if check.passed is False else check for check in checks]
+                with timer(timings, "repair"):
+                    mask = np.clip((diagnosis.illumination - cfg["fusion"]["highlight_start"]) / (1 - cfg["fusion"]["highlight_start"]), 0, 1)
+                    repaired_fusion = fuse(image, deep_image, classical_image, diagnosis, recovery, cfg,
+                                          recovery_enabled=recovery_enabled,
+                                          alpha_fraction=cfg["repair"]["fusion_fraction"], repair_mask=mask)
+                    safer_recovery = replace(recovery, gain_cap=np.maximum(1, recovery.gain_cap * cfg["repair"]["gain_fraction"]))
+                    output = denoise(repaired_fusion.image, diagnosis, safer_recovery, cfg,
+                                     recovery_enabled=recovery_enabled, uniform="no_gain_denoise" in req.ablate).image
+                self._cancel(req)
+                with timer(timings, "metrics"):
+                    metrics = request_metrics(uint8(image), uint8(output), valid, cfg)
+                with timer(timings, "guardrails"):
+                    second = [replace(check, attempt=2) for check in audit(metrics, output, diagnosis, cfg)]
+                checks.extend(second)
+                failed = [check.check for check in second if check.passed is False]
+                if failed:
+                    # No third repair: select the already available conservative safe/classical path.
+                    output = image ** cfg["fusion"]["safe_gamma"]
+                    if classical_image is not None:
+                        output = np.minimum(output, classical_image)
+                    if recovery_enabled:
+                        output = enforce_gain(output, diagnosis.luminance, safer_recovery, cfg)
+                    with timer(timings, "metrics"):
+                        metrics = request_metrics(uint8(image), uint8(output), valid, cfg)
+                    with timer(timings, "guardrails"):
+                        fallback_audit = [asdict(check) for check in audit(metrics, output, diagnosis, cfg)]
+                    warnings.append(EngineWarning("guardrail_unresolved", "The single repair failed; a conservative final result was selected and its checks are recorded."))
+            elif failed:
+                warnings.append(EngineWarning("guardrail_audit_failed", "The baseline audit found quality issues; its direct output was preserved."))
+            yield self._stage("guardrails", "Checking the final result",
+                              "Recorded quality checks and any single conservative repair without rerunning the trained model.",
+                              "At most two repair-attempt check sets; conservative fallback has a separate audit.", [], None,
+                              {"audit_only": audit_only, "checks": [asdict(check) for check in checks],
+                               "conservative_final_checks": fallback_audit}, timings["guardrails"])
+            self._cancel(req)
+            with timer(timings, "report"):
+                method = deep_result.method if deep_result is not None else "classical"
+                decisions = [
+                    ("Used classical processing because the requested model was unavailable."
+                     if method == "classical_fallback" else
+                     "Used a verified restoration model." if method in ("cidnet", "zerodce") else
+                     "Used classical processing as explicitly requested."),
+                    "Preserved the original processing dimensions and supplied transparency.",
+                    ("Used configured fixed settings because tuning was explicitly disabled." if hybrid else "Preserved direct baseline output without hybrid postprocessing."),
+                    ("Applied input-confidence controls to hybrid processing." if hybrid and recovery_enabled and not no_fusion else "Preserved the explicitly requested baseline or confidence-control ablation."),
+                    ("Attempted one conservative repair using cached model output." if repair_attempted else "Recorded quality checks without an automatic repair."),
+                    "Left unavailable learned quality scores empty with reasons.",
+                ]
+                headline = f"{diagnosis.raw['severity'].capitalize()} low light processed using the recorded available restoration path."
+            with timer(timings, "render"):
+                final = final_visuals(output, req.alpha)
+            digest = sha256(str(req.image.shape).encode())
+            digest.update(memoryview(req.image))
+            if req.alpha is not None:
+                digest.update(req.alpha.tobytes())
+            actual = "hybrid" if hybrid and method != "classical_fallback" else method
+            timings["core_total"] = (perf_counter() - start) * 1000
+            yield EnhanceResult(
+                headline, diagnosis_chips(diagnosis, recovery), diagnosis.raw, diagnosis.hotspots, recovery.summary, [], None, "not_run", checks,
+                decisions, story, metrics,
+                {"base_key": "final_preview", "L_key": "L_gray", "gamma_default": 1.0, "exposure_default": 1.0,
+                 "gamma_range": [0.4, 2.5], "exposure_range": [0.25, 4.0]}, timings, warnings,
+                {"requested_mode": req.mode, "actual_method": actual,
+                 "fallback_chain": deep_result.fallback_chain if deep_result else [],
+                 "checkpoint": deep_result.checkpoint if deep_result else None,
+                 "checkpoint_hash": deep_result.checkpoint_hash if deep_result else None,
+                 "precision": deep_result.precision if deep_result else "fp32",
+                 "device": deep_result.device if deep_result else "cpu", "placement_policy": self._registry.policy,
+                 "ablate": sorted(req.ablate), "seed": req.seed, "config_hash": cfg.digest,
+                 "input_hash": digest.hexdigest()[:12], "core_version": __version__, "contract_version": CONTRACT_VERSION,
+                 "repair_attempted": repair_attempted, "guardrails_unresolved": failed,
+                 "conservative_final_checks": fallback_audit, "perf_levers": []}, final,
+            )
+        finally:
+            # Model activations have already been released inside registry contexts;
+            # closing the generator discards all run-local CPU arrays.
+            pass
 
     @staticmethod
     def _stage(name: str, title: str, caption: str, note: str, visuals: list[Visual],

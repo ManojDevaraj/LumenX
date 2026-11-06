@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import argparse
+import cProfile
 import ctypes
 import json
 from pathlib import Path
 import platform
+import pstats
 from time import perf_counter
 
 import numpy as np
@@ -52,6 +54,28 @@ def synthetic_image(index: int) -> np.ndarray:
     return np.clip(image, 0, 1)
 
 
+def profile_hotspots(engine: object) -> str:
+    """Profile one separate noisy 1080p pass; do not contaminate benchmark timings."""
+    image = synthetic_image(1)
+    request = EnhanceRequest(image, (1920, 1080), mode="classical")
+    profiler = cProfile.Profile()
+    profiler.enable()
+    for _ in engine.run(request):
+        pass
+    profiler.disable()
+    stats = pstats.Stats(profiler)
+    ordered = sorted(stats.stats.items(), key=lambda entry: entry[1][2], reverse=True)[:5]
+    lines = ["## Development CPU function profile", "",
+             "Separate warm synthetic noisy 1080p classical pass, ranked by exclusive self time.",
+             "This is a development hotspot profile, not a hybrid/GPU benchmark or a timing-gate pass.",
+             "It does not replace the required full-hybrid v0.4 profile or alter the v0.2 exception.", "",
+             "| Function | Calls | Self ms | Cumulative ms |", "|---|---:|---:|---:|"]
+    for (filename, line, name), (primitive, calls, own, total, callers) in ordered:
+        label = f"{name} ({Path(filename).name}:{line})".replace("|", "/")
+        lines.append(f"| {label} | {calls} | {own * 1000:.2f} | {total * 1000:.2f} |")
+    return "\n".join(lines) + "\n"
+
+
 def main() -> int:
     """Report true timings and fail the gate explicitly when requested."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -59,13 +83,21 @@ def main() -> int:
     parser.add_argument("--passes", type=int, default=3)
     parser.add_argument("--output", type=Path, default=Path(__file__).resolve().parents[1] / "bench_results.md")
     parser.add_argument("--check-gates", action="store_true")
+    parser.add_argument("--profile-only", action="store_true", help="Append a separate top-five function profile without rewriting benchmark data")
     args = parser.parse_args()
     if args.images < 1 or args.passes < 1:
         parser.error("Image and pass counts must be positive.")
     start = perf_counter()
-    engine = create_engine()
+    engine = create_engine(device="cpu")
     engine.warmup()
     cold_ms = (perf_counter() - start) * 1000
+    if args.profile_only:
+        profile = profile_hotspots(engine)
+        previous = args.output.read_text(encoding="utf-8") if args.output.exists() else ""
+        previous = previous.split("## Development CPU function profile")[0].rstrip()
+        args.output.write_text(previous + "\n\n" + profile, encoding="utf-8")
+        print(profile, flush=True)
+        return 0
     rows: list[dict[str, float]] = []
     for index in range(args.images):
         image = synthetic_image(index)

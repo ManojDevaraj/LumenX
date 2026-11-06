@@ -32,7 +32,7 @@ from .contracts import (
 )
 from .validation import expected_stages, validate_request, validate_rgb
 
-VERSION = "0.2.0"
+from . import __version__ as VERSION
 _LEARNED = ("niqe", "brisque", "clipiqa", "musiq", "lpips", "ssim")
 
 
@@ -123,7 +123,7 @@ class FakeMetricSuite:
             "err_recovered", "err_estimated", "err_unrecoverable", "recovered_pct",
             "estimated_pct", "unrecoverable_pct",
         )
-        reasons = dict.fromkeys(keys, "Not implemented by the CPU fake engine in v0.1.0.")
+        reasons = dict.fromkeys(keys, "Not implemented by the CPU fake engine.")
         reasons["psnr"] = "Unavailable only for an exact match (infinite PSNR)."
         reasons["psnr_gt_mean"] = (
             "Unavailable for zero prediction mean or an exact mean-adjusted match."
@@ -363,7 +363,7 @@ class FakeEngine:
                     yield StageEvent(
                         "warning", "fake_engine", "Demonstration engine",
                         "This release demonstrates the interface and does not perform trained restoration.",
-                        "Real inference and IQA are not implemented in core-v0.1.0.", [], None,
+                        "This explicitly selected fake engine never loads trained models or learned IQA.", [], None,
                         {"code": "fake_engine", "fake": True}, 0.0,
                     )
                     self._cancel(req)

@@ -76,3 +76,17 @@ Not an RTX 2050 GPU measurement; no end-to-end server latency claim.
   "contract_version": "1.0"
 }
 ```
+
+## Development CPU function profile
+
+Separate warm synthetic noisy 1080p classical pass, ranked by exclusive self time.
+This is a development hotspot profile, not a hybrid/GPU benchmark or a timing-gate pass.
+It does not replace the required full-hybrid v0.4 profile or alter the v0.2 exception.
+
+| Function | Calls | Self ms | Cumulative ms |
+|---|---:|---:|---:|
+| <guidedFilter> (~:0) | 5 | 158.57 | 158.57 |
+| denoise (denoise.py:14) | 1 | 88.76 | 425.17 |
+| <max> (~:0) | 14 | 75.84 | 75.84 |
+| enhance_classical (classical.py:25) | 1 | 52.21 | 148.67 |
+| <multiply> (~:0) | 5 | 45.49 | 45.49 |

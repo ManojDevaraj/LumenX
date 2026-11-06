@@ -1,4 +1,43 @@
-# Core handoff — core-v0.2.0 (approved temporary performance exception)
+# Core handoff — v0.3.0.dev0 in progress
+
+## Current development status
+
+core-v0.2.0 was tagged on core at cd572df with the user's temporary performance
+exception. Exact measurements/exception are preserved below and in CHANGELOG.md.
+Work proceeded immediately into v0.3.0, only under core/ and on branch core.
+
+Implemented: official architectures/notices, publisher SHA256 manifest/downloader,
+once-loaded registry, measured placement preflight, precision handling, tiled
+adapters, live adapter, confidence fusion, ablations and one repair reusing cached
+deep output. Direct baselines remain unmodified; no_fusion is a postprocess bypass;
+no_recoverability removes all confidence control signals. No trained data invented.
+
+Until v0.4, hybrid explicitly requires no_tuner; otherwise EngineUnavailable before
+output. No input/contract field is changed. Full hybrid_ready remains false;
+hybrid_without_tuner_ready reflects actual loaded models. No random weights count
+as a verified model. Registry checks bytes/state dictionaries before inference.
+
+Validation: 349 CPU tests pass, nine real-GPU gates explicitly deselected, Ruff
+passes. Repair call-count tests use explicit stubs, not GPU evidence. Real gates
+opt in via --run-gpu and FAIL when prerequisites are missing.
+
+Prerequisites: nvidia-smi detects RTX 2050 / 4096 MiB / driver 581.86. Torch and
+einops are still absent in the visible environment. Official Zero-DCE++ was acquired
+through connected GitHub and Git blob/SHA256 verified; both CIDNet files remain
+absent. User has been sent network-enabled package/downloader commands.
+
+No v0.3.0 tag: actual checkpoint output, CUDA precision, 1080p/12 MP OOM, placement
+and 60-second live tests are not verified. Those gates have no exception.
+Continue GPU checks when dependencies/weights are available. Agent-terminal
+network remains blocked; local tags are not proof of remote publication.
+
+Top-five separate CPU profile is in bench_results.md: guidedFilter, denoise, max,
+enhance_classical and multiply. It is not the required final hybrid v0.4 profile
+and does not overwrite the original v0.2 benchmark sample or claim a speedup.
+
+---
+
+# Released core-v0.2.0 (approved temporary performance exception)
 
 ## Current status and review decision
 

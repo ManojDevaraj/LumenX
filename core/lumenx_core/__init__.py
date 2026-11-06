@@ -12,12 +12,12 @@ if not hasattr(cv2, "ximgproc") or not hasattr(cv2.ximgproc, "guidedFilter"):
         "opencv-contrib-python dependency and remove other OpenCV wheels."
     )
 
-__version__ = "0.2.0"
+__version__ = "0.3.0.dev0"
 __all__ = ["__version__", "create_engine", "create_fake_engine"]
 
 
 def create_engine(config_path: str | None = None, device: str | None = None) -> Engine:
-    """Create a real CPU classical engine; unsupported modes fail on run()."""
+    """Create the real engine; no_tuner is explicit until full adaptive tuning ships."""
     from .engine import RealEngine
 
     return RealEngine(config_path=config_path, device=device)

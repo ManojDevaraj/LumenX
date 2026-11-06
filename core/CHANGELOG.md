@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.3.0.dev0 — in progress, GPU gates not verified
+
+- Official CIDNet/Zero-DCE++ architectures with provenance/licence notices.
+- SHA256 manifest/downloader and verified official Zero-DCE++ checkpoint.
+- Cosine tiling, stride padding, native-size output and cancellation.
+- Once-loaded registry with measured resident/swap preflight and original CPU
+  weight snapshots. Finite-output checking allows one FP32 retry; precision-
+  sensitive HVI/attention normalization use FP32 without changing layers/state names.
+- Direct baselines, confidence-bounded fusion, hybrid denoise and a single repair
+  using cached deep output. Until v0.4, hybrid requires explicit no_tuner.
+- 349 CPU tests pass; nine real-GPU gates explicitly deselected by default.
+  --run-gpu opts in; missing prerequisites FAIL rather than silently skip.
+- Torch/einops and both CIDNet files remain absent in the visible setup. No
+  core-v0.3.0 tag, trained-output or GPU performance claim is made.
+- Separate top-five CPU function profile appended to bench_results.md; the
+  required final hybrid v0.4 profile/1100 ms p95 budget remain unchanged.
+
 ## 0.2.0 — 2026-11-06, temporary performance exception approved
 
 - Real CPU classical Engine with contract-valid ordered stages and report.
