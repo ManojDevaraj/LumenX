@@ -1,8 +1,26 @@
 # Notes for server integration
 
+## v0.2.0 branch candidate — NOT RELEASED
+
+create_engine(device="cpu") now returns real classical processing. Request
+mode="classical" explicitly: the default hybrid mode, dl, zerodce and real live
+raise EngineUnavailable before output. Health reports fake=false, ready=true,
+modes=[classical], hybrid_ready=false. No dependency or frozen contract change.
+
+325 CPU tests and Ruff pass. Real diagnosis/recovery/classical/denoise/audit stages
+produce full maps and preserved final alpha. Actual output gain is capped; hidden
+RGB cannot drive diagnosis. Guardrails audit only; failures remain warnings and
+no repair is claimed. Custom metrics are real, learned IQA remains null with
+reasons. Use MetricSuite.unavailable() and per-result metrics.unavailable.
+
+The 60-run synthetic 1080p report is core/bench_results.md: diagnosis p95 51.28 ms,
+numerical p95 582.47 ms, complete core p95 830.55 ms. Mandatory release performance
+gate remains failed. No v0.2.0 tag exists; no v0.3.0 started. Latest released tag
+is still core-v0.1.0. Do not advertise CPU figures as RTX or server timings.
+
 ## v0.1.0 contract fixture
 
-Import `create_fake_engine` from `lumenx_core`. `create_engine` deliberately raises
+At the v0.1.0 tag: import `create_fake_engine`. `create_engine` deliberately raises
 EngineUnavailable until real processing ships. Contract version is 1.0; package
 version is 0.1.0. Release tag is `core-v0.1.0` on branch `core` (no main merge under
 the user's current restriction). The release passes 243 CPU tests and Ruff. See

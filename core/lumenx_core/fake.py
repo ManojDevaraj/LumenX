@@ -32,7 +32,7 @@ from .contracts import (
 )
 from .validation import expected_stages, validate_request, validate_rgb
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 _LEARNED = ("niqe", "brisque", "clipiqa", "musiq", "lpips", "ssim")
 
 

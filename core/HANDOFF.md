@@ -1,4 +1,47 @@
-# Core handoff — core-v0.1.0
+# Core handoff — v0.2.0 candidate (performance gate blocked)
+
+## Current status and review decision
+
+The user's “done, continue” authorized the next milestone on core only. Real
+classical processing is functionally complete; **core-v0.2.0 is not tagged** because
+its performance gate fails. No v0.3.0 work has begun. All changes remain inside
+core/; frozen contract, server, main and references are unchanged.
+
+Completed: native-patch noise/confidence, illumination/SNR/cast/hotspots/clipping,
+input-based recovery, adaptive Retinex/partial Lab CLAHE/colour, three-strength
+guided denoising, actual gain enforcement, real custom metrics, audit checks,
+full-size map/report/story/alpha output, frozen config, debug CLI and benchmark.
+FakeEngine remains compatible. Learned IQA is null with reasons; no trained model
+is present. Neural/live requests fail before output. Classical has no tuner and
+guardrails are audit-only as required for v0.2.0.
+
+Validation: **325 CPU tests passed; Ruff passed**. New cases cover reference colour
+pairs, injected audit failures, native noise accuracy, actual gain caps, alpha
+isolation, neutral RGB preservation and tiny OpenCV scalar/filter corner cases.
+Developer CLI smoke test completed; synthetic input/final were visually inspected.
+This is not a real-photo quality evaluation or a GPU test run.
+
+Benchmark: core/bench_results.md; 20 synthetic 1920x1080 cases x three warm passes.
+Diagnosis p95 **51.28 ms** (limit <30), numerical p95 **582.47 ms** (limit <100),
+complete core p95 **830.55 ms**, peak RAM about 502 MiB. CPU only; no RTX/CUDA,
+neural, live or end-to-end server timing claim.
+
+Optimizations without resolution/stage cuts: OpenCV image/channel operations,
+8-bit Lab histogram operations, fixed threading, official Fast Guided Filter
+coefficients with full-resolution evaluation, a proven native-max highlight
+bypass, and no-noise/bright denoise bypass retaining actual gain enforcement.
+No pre-approved hybrid performance lever applied; no silent scoring cuts.
+
+Per docs/prompts/PROMPT_CODEX_CORE.md sections 6 and 9, **do not tag a version whose
+gate fails**. A user decision is required to waive/redefine these CPU milestone
+limits; otherwise performance work must continue before release. A waiver would
+not change the later 1100 ms GPU hybrid target. No contract change or architectural
+alternative is requested. Dependency pins/environment match v0.1.0; no external
+downloads were required. The benchmark embeds actual observed v0.2 health.
+
+---
+
+# Archived handoff — core-v0.1.0
 
 ## Status
 
