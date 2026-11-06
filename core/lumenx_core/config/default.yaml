@@ -57,6 +57,10 @@ real:
     minimum_patches: 25
     # Mean absolute Sobel gradient limit when accepting a noise patch.
     flat_gradient: 0.12
+    # Reject correlated high-frequency texture (notably alternating checkerboards).
+    flat_correlation: 0.35
+    # Numerical floor for the residual correlation denominator.
+    flat_variance_floor: 0.00000001
     # Required fraction of visible pixels in a sampled native patch.
     patch_valid_fraction: 0.95
     # Gaussian MAD consistency constant and high-pass filter noise norm.
@@ -203,3 +207,20 @@ repair:
   fusion_fraction: 0.5
   gain_fraction: 0.75
   highlight_boost: 0.75
+tuner:
+  # Fixed proxy geometry and deterministic scoring constants for twelve candidates.
+  proxy_side: 256
+  prior_gamma: {extreme: [0.32, 0.48], severe: [0.42, 0.58], moderate: [0.55, 0.70], mild: [0.72, 0.90]}
+  broad_gamma: [0.35, 0.95]
+  clahe_range: [0.05, 0.25]
+  color_range: [0.0, 0.20]
+  conservative_gamma: 0.85
+  conservative_clahe: 0.05
+  conservative_color: 0.0
+  # Feasibility and score scales are global, never computed from a candidate set.
+  max_clip_pct: 2.0
+  clip_norm: 2.0
+  chroma_norm: 12.0
+  edge_weight: 0.25
+  # Learned CLIP-IQA contribution when its optional model is installed.
+  clipiqa_weight: 1.0

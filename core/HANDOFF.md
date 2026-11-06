@@ -1,4 +1,4 @@
-# Core handoff — v0.3.0 released; v0.4.0 in progress
+# Core handoff — v0.4.0 released
 
 ## Current development status
 
@@ -24,11 +24,14 @@ single repair pass were exercised, with cached deep output reused. Measured peak
 resident VRAM was 407 MiB. This verifies the v0.3.0 GPU gate; latency remains a
 reported metric rather than a release gate by user-approved scope reduction.
 
-The v0.3.0 release tag is created on `core`. v0.4 work now addresses estimator,
-denoise and brightness review findings, then adds the tuner, full MetricSuite,
-request-time metrics and final report. Tuner policy is fixed at 12 candidates and
-uses `clipiqa+custom`; confidence-validation is intentionally out of scope. Webcam
-and `enhance_frame` tuning comes after the v0.4 still-image path.
+The v0.3.0 release tag is created on `core`. v0.4 fixes estimator support,
+checkerboard flatness, denoise noise monotonicity and conservative brightness,
+with regression coverage. It adds a deterministic 12-candidate proxy tuner,
+candidate events, fixed-score feasibility selection and request-time MetricSuite
+metrics. PyIQA is pinned in the optional `core[iqa]` extra; if unavailable at runtime, CLIP-IQA is
+null with a reason and the tuner identifies the degraded `custom_no_clipiqa`
+recipe. Confidence-validation is intentionally out of scope; webcam and
+`enhance_frame` tuning comes after the v0.4 still-image path.
 
 Top-five separate CPU profile is in bench_results.md: guidedFilter, denoise, max,
 enhance_classical and multiply. It is not the required final hybrid v0.4 profile

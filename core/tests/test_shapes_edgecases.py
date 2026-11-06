@@ -103,6 +103,32 @@ def test_native_noise_estimator_detects_noise_removed_by_downsampling():
     assert d.raw["noise_estimator_confidence"] > 0.9
 
 
+@pytest.mark.parametrize("textured", [False, True])
+def test_native_noise_estimator_is_calibrated_on_flat_and_textured_signal(textured):
+    """Sensor sigma is retained within 20% when smooth scene structure is present."""
+    cfg = load_config()
+    rng = np.random.default_rng(23)
+    base = np.full((512, 512), 0.16, np.float32)
+    if textured:
+        base += 0.025 * np.sin(np.linspace(0, 8 * np.pi, 512, dtype=np.float32))[None, :]
+    sigma = 0.012
+    y = np.clip(base + rng.normal(0, sigma, base.shape), 0, 1).astype(np.float32)
+    d = diagnose(np.repeat(y[..., None], 3, axis=2), np.ones(y.shape, bool), cfg)
+    assert d.raw["noise_sigma"] == pytest.approx(sigma, rel=0.2)
+    assert d.raw["noise_patch_count"] == 100
+    assert d.raw["noise_estimator_confidence"] == 1
+
+
+def test_checkerboard_is_not_accepted_as_a_flat_noise_patch():
+    """Alternating texture defeats Sobel-only flatness checks but has residual correlation."""
+    cfg = load_config()
+    checker = 0.15 + 0.08 * ((np.indices((256, 256)).sum(axis=0) % 2) * 2 - 1)
+    image = np.repeat(checker.astype(np.float32)[..., None], 3, axis=2)
+    d = diagnose(image, np.ones(checker.shape, bool), cfg)
+    assert d.raw["noise_patch_count"] == 0
+    assert d.raw["noise_estimator_confidence"] == 0
+
+
 def test_transparent_rgb_cannot_drive_diagnosis_and_input_is_unchanged():
     """Hidden arbitrary RGB is excluded from measurements; supplied arrays remain untouched."""
     engine = create_engine()
@@ -142,6 +168,17 @@ def test_bright_window_does_not_hide_dark_subject():
     assert len(result.hotspots) > 0
 
 
+def test_readable_low_light_structure_is_visibly_brightened():
+    """Weak-confidence labels may restrain gain but cannot leave readable structure dark."""
+    height = width = 192
+    yy, xx = np.mgrid[:height, :width]
+    base = 0.06 + 0.04 * ((xx // 16 + yy // 16) % 2)
+    image = np.repeat(base.astype(np.float32)[..., None], 3, axis=2)
+    result = list(create_engine().run(EnhanceRequest(image, (width, height), mode="classical")))[-1]
+    output = result.visuals[0].image[..., :3].astype(np.float32) / 255
+    assert float(output.mean()) >= float(image.mean()) * 1.5
+
+
 def test_real_determinism_and_config_isolation():
     """Repeated calls give identical arrays without mutable public config state."""
     engine = create_engine()
@@ -157,14 +194,14 @@ def test_real_determinism_and_config_isolation():
         load_config()["real"]["threads"] = 1
 
 
-@pytest.mark.parametrize("mode", ["hybrid"])
-def test_unreleased_modes_fail_before_yield(mode):
-    """The unavailable tuner is not silently replaced by an unreported no_tuner flag."""
+def test_hybrid_tuner_runs_without_no_tuner_flag():
+    """v0.4 hybrid emits its exact twelve deterministic candidates before tuning."""
     image = np.full((8, 8, 3), 0.1, np.float32)
-    stream = create_engine().run(EnhanceRequest(image, (8, 8), mode=mode))
-    with pytest.raises(EngineUnavailable):
-        next(stream)
-    assert list(stream) == []
+    req = EnhanceRequest(image, (8, 8), mode="hybrid")
+    items = list(create_engine().run(req))
+    assert validate_run(items, req) == []
+    assert len(items[-1].candidates) == 12
+    assert items[-1].search_ms is not None
 
 
 def test_real_validation_cancellation_and_early_close():

@@ -1,11 +1,15 @@
 # Changelog
 
-## 0.4.0.dev0 — in progress
+## 0.4.0 — 2026-11-06
 
-- Fixing diagnosis/noise, denoise, brightness-restraint review findings and adding
-  the 12-candidate tuner, full MetricSuite, request-time metrics and final report.
-- Tuner scoring recipe is `clipiqa+custom`; latency is reported, not a release gate.
-  Confidence-validation and live/webcam tuning are deferred by approved scope.
+- Fixed native noise support accounting and checkerboard flatness detection; synthetic
+  flat and textured noise is measured within 20%, and denoise cannot increase it.
+- Added a deterministic 12-candidate tuner, candidate events/thumbnails, fixed-score
+  feasibility ranking, request-time metrics and learned CLIP-IQA integration.
+- Tuner recipe is `clipiqa+custom` when the optional pinned `core[iqa]` PyIQA
+  dependency is present; it records `custom_no_clipiqa` with an unavailable reason otherwise.
+- Latency is reported, not a release gate. Confidence-validation and live/webcam
+  tuning are deferred by approved scope.
 
 ## 0.3.0 — 2026-11-06
 

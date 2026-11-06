@@ -52,7 +52,16 @@ def native_noise(
         gx = cv2.Sobel(patch, cv2.CV_32F, 1, 0)
         gy = cv2.Sobel(patch, cv2.CV_32F, 0, 1)
         gradient = float(np.mean(cv2.magnitude(gx, gy)[mask]))
-        if gradient > c["flat_gradient"]:
+        # A checkerboard has a near-zero Sobel response at alternating pixels.
+        # Its one-pixel residual correlation is nevertheless close to -1, unlike
+        # independent sensor noise.  Reject correlated high-frequency structure.
+        centered = patch - cv2.boxFilter(patch, cv2.CV_32F, (5, 5))
+        horizontal = (centered[:, :-1] * centered[:, 1:])[mask[:, :-1] & mask[:, 1:]]
+        vertical = (centered[:-1, :] * centered[1:, :])[mask[:-1, :] & mask[1:, :]]
+        pairs = np.concatenate((horizontal, vertical))
+        variance = float(np.mean(centered[mask] ** 2))
+        correlation = float(np.mean(pairs) / max(variance, c["flat_variance_floor"])) if pairs.size else 0.0
+        if gradient > c["flat_gradient"] or abs(correlation) > c["flat_correlation"]:
             continue
         residual = cv2.filter2D(patch, cv2.CV_32F, kernel)[1:-1, 1:-1]
         inner = mask[1:-1, 1:-1]
@@ -64,7 +73,10 @@ def native_noise(
         samples.append(sigma)
     if samples:
         sigma = float(np.median(samples))
-        confidence = min(1.0, len(samples) / c["minimum_patches"])
+        # Confidence reflects support out of the fixed deterministic candidate
+        # count.  Small images reach full support only when every candidate is
+        # accepted; large images use the configured 100-patch budget.
+        confidence = len(samples) / len(positions)
     else:
         # Tiny/no-flat-patch fallback is explicitly uncertain; do not assert zero noise.
         values = y[valid]

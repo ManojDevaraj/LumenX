@@ -12,7 +12,7 @@ if not hasattr(cv2, "ximgproc") or not hasattr(cv2.ximgproc, "guidedFilter"):
         "opencv-contrib-python dependency and remove other OpenCV wheels."
     )
 
-__version__ = "0.3.0.dev0"
+__version__ = "0.4.0"
 __all__ = ["__version__", "create_engine", "create_fake_engine"]
 
 
