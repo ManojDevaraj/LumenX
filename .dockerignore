@@ -1,0 +1,17 @@
+.git
+.git/**
+**/.venv/
+**/venv/
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/.ruff_cache/
+core/weights/*.pth
+server/datasets/
+server/runs/
+server/results/*_evaluation.jsonl
+server/results/failure_review.csv
+server/results/failure_audit/
+server/results/*.log
+server/results/progress.json
+server/tests/

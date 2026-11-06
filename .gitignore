@@ -14,6 +14,9 @@ server/datasets/data/
 server/runs/*/
 server/results/*
 !server/results/.gitkeep
+!server/results/benchmark_summary.json
+!server/results/benchmark_summary.csv
+!server/results/benchmark_summary.svg
 
 # Local machine configuration
 .env

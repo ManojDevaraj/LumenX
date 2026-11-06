@@ -2,6 +2,9 @@ runs/*
 !runs/.gitkeep
 results/*
 !results/.gitkeep
+!results/benchmark_summary.json
+!results/benchmark_summary.csv
+!results/benchmark_summary.svg
 eval/cache/
 eval/datasets/
 datasets/*
