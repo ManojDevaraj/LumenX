@@ -1,10 +1,10 @@
-# Core handoff — v0.1.0 candidate
+# Core handoff — core-v0.1.0
 
 ## Status
 
-Implementation of the contract/FakeEngine milestone is complete; release gates
-and tag are pending. Work remains on branch `core`; no `main` or `server` branch
-changes are authorized by the user's current instruction.
+The contract/FakeEngine milestone is complete and release gates passed. Release
+tag: `core-v0.1.0`, on branch `core`. No `main` merge or `server` branch change is
+authorized by the user's current instruction. Work stops here for review.
 
 ## Completed
 
@@ -15,14 +15,42 @@ changes are authorized by the user's current instruction.
 
 ## Environment and validation
 
-- Initially visible Python: 3.13.2, unsupported by the required 3.10/3.11 range.
+- Validated Python: 3.11.9, copied by the user into ignored `core/.python311`.
+- Isolated environment: `core/.venv`, include-system-site-packages=false.
+- Editable installation: lumenx-core 0.1.0 points to this checkout's `core/`,
+  confirmed through installed distribution metadata and isolated-mode import.
+- Validated pins: numpy 2.2.6, opencv-contrib-python 4.11.0.86, PyYAML 6.0.2,
+  pytest 8.3.5, Ruff 0.11.13. Exactly one OpenCV distribution is installed and
+  cv2.ximgproc.guidedFilter is available. `pip check`: no broken requirements.
 - Python 3.10 syntax parsing of all Python sources: passed.
-- Network from agent terminal: blocked socket access to GitHub and PyPI.
-- User reported environment prepared; the visible parent `.venv` points to a
-  Python311 executable not currently accessible to this runtime. Expected
-  `core/.venv` is not yet visible. Awaiting the supported interpreter/environment.
-- Editable install, pytest, Ruff, and runtime health: pending actual execution.
+- Required pytest gate: **243 passed**, zero skipped, initial measured run 4.46 s.
+- Ruff: **All checks passed**.
+- Network from agent terminal remains blocked to GitHub/PyPI. The initial push
+  attempt failed before connection. A local tag is not evidence of a remote tag;
+  remote publication must be verified separately. Never force-push.
 - No GPU benchmarks: this release implements no real engine.
+
+## Observed warm health output
+
+```json
+{
+  "fake": true,
+  "ready": true,
+  "hybrid_ready": false,
+  "warm": true,
+  "device": "cpu",
+  "placement_policy": "resident",
+  "models": {
+    "cidnet": {"available": false, "checkpoints": []},
+    "zerodce": {"available": false},
+    "iqa": {"clipiqa": false, "niqe": false, "brisque": false, "musiq": false, "lpips": false}
+  },
+  "vram_mb": {"total": 0, "allocated": 0, "reserved": 0, "peak": 0},
+  "degraded": ["fake_engine", "real_engine_not_implemented"],
+  "core_version": "0.1.0",
+  "contract_version": "1.0"
+}
+```
 
 ## Known limitations and open issues
 
@@ -32,8 +60,8 @@ changes are authorized by the user's current instruction.
   the checker preserves the explicit required key without changing the contract.
 - User says work only on `core` and stop after tagging. This supersedes the prompt's
   main-merge release steps: tag on core after gates pass; do not merge into main.
-- A release must not be tagged until a clean supported-Python editable install,
-  required pytest gate, and Ruff checks pass. No contract change is requested.
+- The supported-Python editable-install, pytest and Ruff gates have passed.
+  No contract change is requested.
 
 ## Review boundary
 

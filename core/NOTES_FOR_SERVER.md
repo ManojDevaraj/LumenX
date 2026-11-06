@@ -4,7 +4,9 @@
 
 Import `create_fake_engine` from `lumenx_core`. `create_engine` deliberately raises
 EngineUnavailable until real processing ships. Contract version is 1.0; package
-version is 0.1.0. Release/tag status is recorded in HANDOFF.md.
+version is 0.1.0. Release tag is `core-v0.1.0` on branch `core` (no main merge under
+the user's current restriction). The release passes 243 CPU tests and Ruff. See
+HANDOFF.md for environment, observed health, and remote publication limitations.
 
 The fake supports hybrid, classical, dl, zerodce, and legal ablations according to
 the frozen stage table. Serialize engine/MetricSuite access on the server; core
