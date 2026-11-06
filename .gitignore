@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.tmp-pip/
+.pytest_cache/
+.ruff_cache/
+
+# Local model weights and user data
+core/weights/*.pth
+server/datasets/data/
+server/runs/*/
+server/results/*
+!server/results/.gitkeep
+
+# Local machine configuration
+.env
+.env.*
+!.env.example

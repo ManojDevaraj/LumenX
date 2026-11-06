@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lumenx-core"
+version = "0.4.0"
+description = "LumenX low-light image restoration engine and streaming contract"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24,<2.0; python_version<'3.13'",
+    "numpy>=2.2,<3.0; python_version>='3.13'",
+]
+
+[project.optional-dependencies]
+vision = [
+    "opencv-contrib-python>=4.8,<4.11; python_version<'3.13'",
+    "opencv-contrib-python>=4.11,<5.0; python_version>='3.13'",
+    "scikit-image>=0.21,<0.24; python_version<'3.13'",
+    "scikit-image>=0.25,<0.27; python_version>='3.13'",
+    "pyyaml>=6.0",
+    "scipy>=1.10",
+    "pillow>=10.0,<13.0",
+]
+models = [
+    "torch>=2.0,<2.6; python_version<'3.13'",
+    "torch>=2.6,<3.0; python_version>='3.13'",
+]
+iqa = ["pyiqa>=0.1.10"]
+dev = ["pytest>=7.0", "ruff"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["lumenx_core*"]
+
+[tool.setuptools.package-data]
+lumenx_core = ["config/*.yaml"]
