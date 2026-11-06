@@ -129,8 +129,8 @@ def main() -> int:
     args = parser.parse_args()
 
     modes = [mode.strip() for mode in args.modes.split(",") if mode.strip()]
-    if not modes or any(mode not in {"classical", "dl", "hybrid"} for mode in modes):
-        parser.error("--modes must contain classical, dl, and/or hybrid")
+    if not modes or any(mode not in {"classical", "dl", "hybrid", "zerodce"} for mode in modes):
+        parser.error("--modes must contain classical, dl, hybrid and/or zerodce")
     allowed_flags = {"no_tuner", "no_fusion", "no_classical", "no_dl", "no_gain_denoise", "no_recoverability", "no_guardrails", "no_color_correction"}
     ablations = [flag.strip() for flag in args.ablations.split(",") if flag.strip()]
     invalid = set(ablations) - allowed_flags
