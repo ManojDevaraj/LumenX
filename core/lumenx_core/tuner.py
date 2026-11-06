@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, replace
 
+import cv2
 import numpy as np
 
 from .classical import enhance_classical
@@ -42,7 +43,11 @@ def tune(image: np.ndarray, diagnosis: DiagnosisResult, cfg: EngineConfig, seed:
                               illumination=proxy(diagnosis.illumination, cfg["tuner"]["proxy_side"]),
                               noise=proxy(diagnosis.noise, cfg["tuner"]["proxy_side"]),
                               snr=proxy(diagnosis.snr, cfg["tuner"]["proxy_side"]),
-                              valid=proxy(diagnosis.valid.astype(np.uint8)[..., None], cfg["tuner"]["proxy_side"])[..., 0].astype(bool))
+                              # cv2.resize preserves two dimensions for a one-channel
+                              # mask.  Adding then indexing a channel made large proxy
+                              # masks one-dimensional and crashed native_noise.
+                              valid=cv2.resize(diagnosis.valid.astype(np.uint8), (small.shape[1], small.shape[0]),
+                                               interpolation=cv2.INTER_NEAREST).astype(bool))
     candidates: list[Candidate] = []
     visuals: list[Visual] = []
     outputs: list[np.ndarray] = []

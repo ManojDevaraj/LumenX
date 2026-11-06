@@ -1,5 +1,21 @@
 # Core handoff — v0.4.0 released
 
+## v0.4.1 candidate — verification blocked by repaired environment
+
+External verification found the tuned-hybrid proxy mask crash at 720p/1080p.
+The candidate replaces the one-channel proxy operation with a direct two-dimensional
+nearest-neighbour resize and adds CPU/GPU tests for flat and noisy non-black 720p
+and 1080p inputs. Request noise values now use native-resolution patch estimates,
+while perceptual metrics remain on the 512px proxy.
+
+`core/constraints.txt` pins the shared CUDA 12.4 stack (Torch 2.6.0+cu124,
+Torchvision 0.21.0+cu124, NumPy 2.2.6 and one contrib OpenCV wheel) and requires
+PyIQA to be installed with `--no-deps`. The prior unconstrained PyIQA install
+replaced CUDA Torch with CPU-only Torch 2.15 and added generic OpenCV wheels; the
+agent removed those conflicting packages before the large CUDA wheel transfer
+ended. Do not tag v0.4.1 until that environment is restored and the CPU/GPU tests
+and three real dark-photo runs complete. No real photos are present in this checkout.
+
 ## Current development status
 
 core-v0.2.0 was tagged on core at cd572df with the user's temporary performance

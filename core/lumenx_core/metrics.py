@@ -210,12 +210,20 @@ class ClassicalMetricSuite:
 
 
 def request_metrics(inp: np.ndarray, out: np.ndarray, valid: np.ndarray, cfg: EngineConfig) -> dict[str, Any]:
-    """Compute the complete frozen 512-pixel request metric shape, no fake scores."""
+    """Compute proxy perceptual metrics while retaining native-resolution noise."""
     from .diagnose import proxy
 
     first, last = proxy(inp, 512), proxy(out, 512)
     mask = cv2.resize(valid.astype(np.uint8), (first.shape[1], first.shape[0]), interpolation=cv2.INTER_NEAREST).astype(bool)
     values, reasons = custom_values(first, last, cfg, mask)
+    # Downsampling smooths sensor noise. The displayed before/after values must
+    # agree with diagnosis and therefore use the same native-patch estimator.
+    native_values, native_reasons = custom_values(inp, out, cfg, valid)
+    for key in ("noise_sigma_in", "noise_sigma_out"):
+        values[key] = native_values[key]
+        reasons.pop(key, None)
+        if key in native_reasons:
+            reasons[key] = native_reasons[key]
     suite = ClassicalMetricSuite(cfg)
     learned_before, learned_after = suite.unpaired(first), suite.unpaired(last)
     unavailable = suite.unavailable()

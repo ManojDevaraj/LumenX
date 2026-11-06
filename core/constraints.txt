@@ -1,0 +1,8 @@
+# Validated shared CUDA/core stack. Install PyIQA with --no-deps after this file
+# so its generic OpenCV and CPU-Torch requirements cannot replace these wheels.
+--extra-index-url https://download.pytorch.org/whl/cu124
+torch==2.6.0+cu124
+torchvision==0.21.0+cu124
+numpy==2.2.6
+opencv-contrib-python==4.11.0.86
+pyiqa==0.1.13
