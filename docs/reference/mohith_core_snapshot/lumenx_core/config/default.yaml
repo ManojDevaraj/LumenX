@@ -1,0 +1,141 @@
+# Runtime thresholds for LumenX. All images are float32 RGB in [0, 1].
+diagnosis:
+  proxy_side: 512                  # Long side used for illumination and summary statistics.
+  illumination_min: 0.025          # Prevent unstable division in very dark areas.
+  illumination_radius: 15          # Guided-filter radius in proxy pixels.
+  illumination_eps: 0.001          # Guided-filter regularization for illumination.
+  noise_patch_size: 32             # Native-resolution patch size for robust noise estimates.
+  noise_max_patches: 100           # Deterministic upper bound on sampled patches.
+  noise_min_patch_dimension: 16    # Smaller edge patches are excluded from noise confidence.
+  noise_min_patch_pixels: 4        # Minimum patch pixels used by the tiny-image fallback.
+  flat_gradient_threshold: 0.035   # Maximum mean gradient for a patch considered flat.
+  noise_floor: 0.002               # Conservative minimum noise estimate for flat/black inputs.
+  noise_epsilon: 0.0001            # Stable denominator for SNR maps.
+  flat_black_luminance: 0.015      # Mean luminance below this is jointly checked for a flat-black input.
+  flat_black_variance: 0.0008      # Low global variance paired with near-black luminance lowers confidence.
+  flat_black_confidence_max: 0.10  # Confidence cap for a flat black image.
+  local_window: 15                 # Local luminance/variance window for SNR and recovery.
+  shadow_luminance_threshold: 0.05 # Measured crushed-shadow threshold.
+  highlight_clip_threshold: 0.98   # Per-channel highlight clipping threshold.
+  shadow_clip_threshold: 0.02      # Per-channel shadow clipping threshold.
+  hotspot_threshold: 0.85          # Illumination above this value is marked as a hotspot.
+  hotspot_min_area: 2              # Ignore one-pixel connected components.
+  hotspot_max_boxes: 64            # Bound the number of exported hotspot regions.
+  nonuniformity_scale: 1.5         # Log-illumination spread mapped to a 0..1 score.
+  cast_mid_low: 0.08               # Lower luminance boundary for colour-cast samples.
+  cast_mid_high: 0.82              # Upper luminance boundary for colour-cast samples.
+  cast_neutral_magnitude: 2.0      # Lab a/b bias below this is treated as neutral.
+  cast_normalization: 36.0         # Lab a/b bias used to normalize cast strength.
+  dark_mean_extreme: 0.035         # Mean-luminance threshold for extreme darkness.
+  dark_mean_severe: 0.08           # Mean-luminance severity threshold.
+  dark_mean_moderate: 0.18         # Mean-luminance severity threshold.
+  dark_median_mild: 0.32           # Median-luminance threshold below which severity is mild.
+
+recoverability:
+  snr_low: 1.5                     # Below this SNR, the soft evidence score is low.
+  snr_high: 8.0                    # At or above this SNR, SNR evidence is strong.
+  near_black_luminance: 0.015      # Joint near-black luminance threshold.
+  low_local_variance: 0.0008       # Joint near-black variance threshold.
+  confidence_floor: 0.18           # Weak estimator confidence limits recovery confidence.
+  guided_radius: 5                 # Smooth class boundaries without broad bleeding.
+  guided_eps: 0.002                # Guided-filter regularization for recovery confidence.
+  unrecoverable_below: 0.24        # Soft score below this value is classified unrecoverable.
+  recovered_above: 0.62            # Soft score at or above this value is classified recovered.
+  minimum_lift: 0.08               # Maximum additive lift in low-confidence areas.
+  additional_lift: 0.92            # Additional lift scaled by recovery evidence.
+
+classical:
+  gamma_min: 0.38                  # Lower bound for adaptive illumination gamma.
+  gamma_max: 0.78                  # Upper bound for adaptive illumination gamma.
+  dark_adaptation_scale: 0.32      # Mean luminance scale used to choose gamma.
+  illumination_floor: 0.025        # Stable denominator in Retinex decomposition.
+  highlight_threshold: 0.80        # Start protecting bright illumination here.
+  highlight_blend: 0.65            # Blend adjusted illumination back toward the original.
+  clahe_clip_limit: 2.0            # Lab lightness CLAHE clip limit.
+  clahe_tile_size: 8               # CLAHE tile grid size in each direction.
+  color_correction_max: 0.22       # Limit gray-world cast correction to preserve scene mood.
+  color_mid_low: 0.04              # Lower input luminance used to estimate gray-world gains.
+  color_mid_high: 0.90             # Upper input luminance used to estimate gray-world gains.
+  color_channel_floor: 0.03        # Avoid unstable gray-world gains for empty channels.
+  color_gain_min: 0.78             # Minimum per-channel gray-world gain.
+  color_gain_max: 1.28             # Maximum per-channel gray-world gain.
+
+deep:
+  checkpoint: zerodce_pp.pth       # Optional local CC BY-NC research checkpoint.
+  scale_factor: 12                 # Zero-DCE++ curve prediction is computed on this proxy.
+  device: auto                     # Use CUDA when available; otherwise use CPU FP32.
+  max_side_live: 1280              # Maximum supported live frame long side.
+  fallback_enabled: true           # Missing/invalid weights disclose a classical fallback.
+
+fusion:
+  dark_threshold: 0.30             # Deep path receives more weight below this illumination.
+  dark_slope: 0.12                 # Smooth transition for dark-region weighting.
+  deep_weight_max: 0.72            # Upper bound before recoverability and alpha controls.
+  alpha_default: 0.55              # Default global deep-path bias.
+  safe_highlight_start: 0.78       # Blend back toward input around bright lamps.
+  safe_weight_max: 0.78            # Maximum safe-path weight around highlights.
+  weak_signal_safe_weight: 0.68    # Smooth contribution in low-evidence areas.
+  safe_gamma: 0.90                 # Gentle fallback lift without a learned contribution.
+  weight_guided_radius: 8           # Edge-aware weight smoothing radius.
+  weight_guided_eps: 0.002         # Regularization for edge-aware fusion maps.
+
+tuner:
+  proxy_side: 256                  # Candidate paths are scored on a small proxy.
+  candidate_count: 12              # Fixed candidate count for comparable runs.
+  clahe_min: 1.0                   # Lower proxy contrast setting.
+  clahe_max: 3.2                   # Upper proxy contrast setting.
+  denoise_k_min: 0.65              # Lower noise smoothing factor.
+  denoise_k_max: 1.35              # Upper noise smoothing factor.
+  alpha_min: 0.20                  # Lower deep contribution bias.
+  alpha_max: 0.82                  # Upper deep contribution bias.
+  color_min: 0.0                   # No colour cast correction.
+  color_max: 0.22                  # Bounded partial colour correction.
+  exposure_target: 0.34            # Proxy luminance target for quality scoring.
+  clipping_limit_pct: 4.0          # Candidate clipping feasibility limit.
+  color_shift_limit: 10.0          # Candidate chroma-shift feasibility limit.
+  edge_retention_min: 0.25         # Candidate minimum edge retention.
+
+denoise:
+  reference_sigma: 0.035            # Reference noise for gain-aware strength mapping.
+  gain_floor: 0.01                  # Stable denominator for local gain calculation.
+  gain_max: 8.0                      # Maximum display/control gain value.
+  gain_min_for_strength: 1.0        # Brightening gain floor used only for denoise-strength estimation.
+  strength_scale: 0.30              # Scale applied to gain and local noise.
+  weak_signal_boost: 0.35           # Extra smoothing for estimated/unrecoverable regions.
+  edge_protection: 0.75             # Reduce smoothing around reliable edges.
+  edge_scale: 0.035                 # Gradient scale used to recognize image edges.
+  guided_radius_light: 2            # Light guided-filter radius.
+  guided_radius_medium: 4           # Medium guided-filter radius.
+  guided_radius_strong: 8           # Strong guided-filter radius.
+  guided_eps_light: 0.004            # Light filter regularization.
+  guided_eps_medium: 0.012           # Medium filter regularization.
+  guided_eps_strong: 0.03            # Strong filter regularization.
+  chroma_smoothing: 0.35            # Maximum blend toward smoothed chroma.
+
+guardrails:
+  overexposure_delta_pct: 0.8        # Allowed added highlight-clipping percentage points.
+  chroma_delta_e_limit: 6.0          # Chroma-only Lab shift threshold.
+  minimum_edge_retention: 0.55       # Minimum reliable-edge correlation.
+  minimum_edge_pixels: 16             # Fewer supported input edges makes the metric unavailable.
+  reliable_edge_percentile: 75       # Only stronger input edges contribute to retention.
+  reliable_edge_floor: 0.012         # Absolute lower bound for supported edge strength.
+  minimum_metric_pixels: 16          # Minimum samples for colour/detail metrics.
+  chroma_mid_low: 0.08               # Exclude very dark pixels from colour-shift checks.
+  chroma_mid_high: 0.88              # Exclude bright pixels from colour-shift checks.
+  chroma_max_span: 0.92              # Exclude highly saturated pixels from colour checks.
+  halo_blur_size: 9                  # Odd Gaussian kernel used to inspect bright-source rings.
+  edge_std_epsilon: 0.0000000001     # Degenerate edge variation threshold.
+  halo_overshoot_limit: 0.08          # Maximum measured bright-ring overshoot.
+  halo_ring_margin: 12                # Pixels around each detected light source to inspect.
+
+report:
+  brightness_high: 0.82              # Low-mean-brightness severity threshold (inverted mean).
+  brightness_medium: 0.65            # Medium low-brightness severity threshold.
+  highlight_high_pct: 3.0             # Percentage of clipped highlights considered high.
+  highlight_medium_pct: 0.8           # Percentage of clipped highlights considered medium.
+  noise_high: 0.05                    # Noise sigma severity threshold.
+  noise_medium: 0.02                  # Noise sigma severity threshold.
+  weak_area_high_pct: 25.0            # Weak-signal area severity threshold.
+  weak_area_medium_pct: 10.0          # Weak-signal area severity threshold.
+  nonuniformity_high: 0.65           # Log-illumination spread severity threshold.
+  nonuniformity_medium: 0.35         # Log-illumination spread severity threshold.
