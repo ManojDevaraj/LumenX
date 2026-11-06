@@ -24,6 +24,11 @@ Policy: CPU resident; no perf levers applied; full input resolution preserved.
 
 Numerical = diagnosis + recoverability + classical + denoise, excluding render, metrics and report.
 Release performance gate: FAIL (numerical p95 <100 ms and diagnosis p95 <30 ms).
+Release exception: the user approved core-v0.2.0 on 2026-11-06 despite these
+measured CPU failures. This is temporary and does not waive the full hybrid
+core_total <=1100 ms p95 at 1080p before core-v0.4.0. GPU inference does not
+remove the CPU diagnosis/classical costs. Required v0.4 optimization/profile
+actions are tracked in HANDOFF.md and CHANGELOG.md.
 core_total additionally includes required full-resolution visual array generation and remaining core work.
 Not an RTX 2050 GPU measurement; no end-to-end server latency claim.
 

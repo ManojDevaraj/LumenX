@@ -1,11 +1,11 @@
-# Core handoff — v0.2.0 candidate (performance gate blocked)
+# Core handoff — core-v0.2.0 (approved temporary performance exception)
 
 ## Current status and review decision
 
-The user's “done, continue” authorized the next milestone on core only. Real
-classical processing is functionally complete; **core-v0.2.0 is not tagged** because
-its performance gate fails. No v0.3.0 work has begun. All changes remain inside
-core/; frozen contract, server, main and references are unchanged.
+The user explicitly approved tagging core-v0.2.0 with a documented temporary CPU
+performance exception and instructed v0.3.0 to start immediately afterward. Work
+remains on core and inside core/; frozen contract, server, main and references
+are unchanged. Functional gates pass; the original CPU timing gates still fail.
 
 Completed: native-patch noise/confidence, illumination/SNR/cast/hotspots/clipping,
 input-based recovery, adaptive Retinex/partial Lab CLAHE/colour, three-strength
@@ -32,12 +32,24 @@ coefficients with full-resolution evaluation, a proven native-max highlight
 bypass, and no-noise/bright denoise bypass retaining actual gain enforcement.
 No pre-approved hybrid performance lever applied; no silent scoring cuts.
 
-Per docs/prompts/PROMPT_CODEX_CORE.md sections 6 and 9, **do not tag a version whose
-gate fails**. A user decision is required to waive/redefine these CPU milestone
-limits; otherwise performance work must continue before release. A waiver would
-not change the later 1100 ms GPU hybrid target. No contract change or architectural
-alternative is requested. Dependency pins/environment match v0.1.0; no external
-downloads were required. The benchmark embeds actual observed v0.2 health.
+The user's latest approval supersedes the original no-failed-gate-tag rule only
+for the v0.2.0 CPU timing exception. It does not reclassify measurements as passes.
+Before core-v0.4.0 the full warm hybrid core_total <=1100 ms p95 at 1080p remains
+mandatory, including CPU stages. GPU model integration does not fix those costs.
+No contract change or quality/resolution reduction was approved. Dependency pins
+are unchanged. bench_results.md embeds observed v0.2 health and timing details.
+
+## Binding v0.4 performance work (latest user instruction)
+
+1. Compute all guided filters at proxy resolution, then upsample (fast guided filter).
+2. Keep the hot path float32, use OpenCV rather than skimage, call cv2.setNumThreads(0).
+3. Compute Lab/luminance conversions and box-filter statistics once; reuse across stages.
+4. Bound native noise sampling to the configured patch budget using vectorized extraction.
+5. Profile per function and record the top five hotspots in bench_results.md.
+
+These requirements must be verified before v0.4.0; the exception is temporary.
+Continue v0.3.0 model registry/wrappers, tiling, live inference, fusion and one
+bounded cached-output repair now. No automatic waiver for v0.3 GPU/weight gates.
 
 ---
 

@@ -1,6 +1,6 @@
 # Notes for server integration
 
-## v0.2.0 branch candidate — NOT RELEASED
+## core-v0.2.0 — temporary CPU-performance exception approved
 
 create_engine(device="cpu") now returns real classical processing. Request
 mode="classical" explicitly: the default hybrid mode, dl, zerodce and real live
@@ -14,9 +14,10 @@ no repair is claimed. Custom metrics are real, learned IQA remains null with
 reasons. Use MetricSuite.unavailable() and per-result metrics.unavailable.
 
 The 60-run synthetic 1080p report is core/bench_results.md: diagnosis p95 51.28 ms,
-numerical p95 582.47 ms, complete core p95 830.55 ms. Mandatory release performance
-gate remains failed. No v0.2.0 tag exists; no v0.3.0 started. Latest released tag
-is still core-v0.1.0. Do not advertise CPU figures as RTX or server timings.
+numerical p95 582.47 ms, complete core p95 830.55 ms. Original CPU limits still
+fail; the user explicitly approved the core-v0.2.0 tag with this temporary exception
+and immediate v0.3.0 work. Full hybrid core_total <=1100 ms p95 before v0.4.0 is
+unchanged, including CPU costs. Do not advertise CPU figures as RTX/server timings.
 
 ## v0.1.0 contract fixture
 

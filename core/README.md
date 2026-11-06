@@ -1,8 +1,8 @@
-# lumenx-core ? v0.2.0 candidate
+# lumenx-core - v0.2.0
 
 Real CPU classical restoration plus explicit FakeEngine, using frozen contract
-v1.0. **Not tagged: the v0.2.0 CPU performance gate currently fails.** Latest
-released tag: core-v0.1.0. See HANDOFF.md and bench_results.md.
+v1.0. Released as core-v0.2.0 with the user's temporary CPU-performance exception.
+Original CPU limits still fail. See HANDOFF.md and bench_results.md.
 
 ## Install and use
 
@@ -128,8 +128,9 @@ or a quality benchmark:
 Peak process RAM about 502 MiB. Complete details/means/max and observed health are
 in bench_results.md. No RTX 2050 neural, live or end-to-end server measurements
 exist. No pre-approved hybrid performance lever was applied. Resolution and stages
-were preserved. The v0.2.0 tag must wait until its gate is met or explicitly waived
-by the user. No v0.3.0 work begins while this milestone remains unaccepted.
+were preserved. The user explicitly approved the v0.2.0 exception and immediate
+v0.3.0 work. Before v0.4.0 the full hybrid core_total <=1100 ms p95 target still
+applies, including CPU stages. Required optimizations are recorded in HANDOFF.md.
 
 ## Weights and licences
 
