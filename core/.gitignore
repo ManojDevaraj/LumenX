@@ -1,0 +1,14 @@
+.venv*/
+.python311/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.tmp/
+.wheelhouse/
+build/
+dist/
+bench_results/
+weights/*
+!weights/README.md
