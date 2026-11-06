@@ -1,0 +1,40 @@
+# v0.1.0 mock settings only; no trained model or quality claim is implied.
+fake:
+  # Gentle reference brightening exponent for the fake classical path.
+  classical_gamma: 0.65
+  # Alternative reference brightening exponent, not neural inference.
+  deep_gamma: 0.55
+  # Safe path exponent for the illustrative fusion.
+  safe_gamma: 0.9
+  # Live mock gamma; frame processing uses a deterministic uint8 lookup table.
+  live_gamma: 0.6
+  # Candidate search ranges; scores are honest brightness surrogates, not IQA.
+  gamma_range: [0.4, 0.9]
+  # Conservative and identity candidate exponents (indices 10 and 11).
+  conservative_gamma: 0.85
+  identity_gamma: 1.0
+  # Mean intensity preference for fake candidate ranking only.
+  brightness_target: 0.45
+  # Candidate penalty on the fraction of clipped pixels.
+  clipping_weight: 0.25
+  # Brightness classes illustrate estimated signal confidence only.
+  confidence_low: 0.05
+  confidence_high: 0.2
+  # RGB luminance coefficients in the specified normalized image domain.
+  luminance_weights: [0.2126, 0.7152, 0.0722]
+  # Highlight statistic threshold in normalized RGB.
+  highlight_threshold: 0.98
+  # Numerical floor for illustrative reflectance and gain calculations.
+  epsilon: 0.000001
+  # Illustrative highlight protection threshold for safe-path weighting.
+  highlight_start: 0.8
+  # Recovery overlay opacity.
+  overlay_alpha: 0.45
+  # uint8 red/amber/green palette indexed by low/middle/high confidence.
+  recovery_colors: [[220, 50, 47], [230, 160, 30], [40, 180, 90]]
+  # Guardrail display thresholds; values are unavailable without real checks.
+  guardrail_thresholds:
+    overexposure: 2.0
+    color_shift: 12.0
+    detail_loss: 0.7
+    halo: 0.1

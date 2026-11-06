@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lumenx-core"
+version = "0.1.0"
+description = "LumenX contract v1.0 and deterministic CPU fake engine"
+readme = "README.md"
+requires-python = ">=3.10,<3.12"
+dependencies = [
+    "numpy==2.2.6",
+    "opencv-contrib-python==4.11.0.86",
+    "PyYAML==6.0.2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest==8.3.5", "ruff==0.11.13"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["lumenx_core*"]
+
+[tool.setuptools.package-data]
+lumenx_core = ["config/*.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+cache_dir = ".pytest_cache"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint.per-file-ignores]
+# The frozen contract's Python block must be preserved verbatim.
+"lumenx_core/contracts.py" = ["E701", "E702", "F401"]
