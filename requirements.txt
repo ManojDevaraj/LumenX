@@ -1,0 +1,6 @@
+-e ./core[models]
+opencv-contrib-python-headless>=4.8,<4.11
+scikit-image>=0.21,<0.24
+PyYAML>=6.0
+scipy>=1.10
+Pillow>=10.0,<13.0

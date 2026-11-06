@@ -1,10 +1,11 @@
 ---
 title: LumenX Low-Light Restoration
-emoji: 🌃
+emoji: "🌃"
 colorFrom: gray
 colorTo: red
-sdk: docker
-app_port: 7860
+sdk: gradio
+app_file: app.py
+python_version: 3.12.12
 ---
 
 # LumenX
@@ -66,13 +67,11 @@ core\.venv\Scripts\python.exe -m pytest core\tests server\tests -q
 
 The synthetic gallery is for UI demonstration only. It is not benchmark data. Quality scores and latency must be measured on the target dataset and machine before making performance claims.
 
-## Hugging Face Spaces
+## Hugging Face Spaces (ZeroGPU)
 
-The repository includes a Docker Space configuration. Create a Docker Space, then push this repository branch to it. The container installs the CPU PyTorch runtime, downloads the upstream Zero-DCE++ checkpoint during image build, starts the FastAPI app on port 7860, and serves the committed aggregate benchmark table. Raw datasets, per-image evaluation rows, and the fine-tuned checkpoint are excluded.
+For a free hosted demo, create a Gradio Space, choose the ZeroGPU free hardware option, and push this repository. The Gradio entry point is `app.py`; its learned and hybrid actions use Hugging Face's `spaces.GPU` decorator, while classical enhancement stays on CPU. The app loads the model at startup, as ZeroGPU requires for CUDA-backed models. Python 3.12.12 and PyTorch 2.8 or newer are selected for current ZeroGPU support. The benchmark tab uses the committed aggregate results; source datasets, raw per-image rows, and the fine-tuned checkpoint stay out of the Space.
 
-The included upstream Zero-DCE++ checkpoint is licensed CC BY-NC 4.0 and is suitable for non-commercial research and demonstrations only unless separately licensed. Attribution and source details are in [the model notices](core/LICENSE_NOTICES.md).
-
-The hosted app uses CPU hardware by default. CPU Basic is listed as free but sleeps after inactivity; Docker Spaces may require an eligible Hugging Face plan. Check current [Spaces hardware and billing details](https://huggingface.co/docs/hub/spaces-overview) before creating the Space. Container storage is ephemeral, so uploaded images and generated runs do not persist across restarts.
+Hugging Face currently allows eligible free personal accounts (verified email, account at least 30 days old) to host up to two ZeroGPU Spaces. Free accounts have a limited daily GPU quota; see the current [ZeroGPU requirements and quotas](https://huggingface.co/docs/hub/spaces-zerogpu). The included Zero-DCE++ checkpoint is licensed CC BY-NC 4.0 for non-commercial research and demonstrations unless separately licensed. Attribution and source details are in [the model notices](core/LICENSE_NOTICES.md). Public Spaces expose both their source and running app; avoid uploading sensitive photos.
 
 ## Current release limits
 
