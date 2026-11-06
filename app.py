@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +25,7 @@ except ImportError:
     spaces = _SpacesFallback()
 
 ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT / "core"))
 WEIGHTS_DIR = ROOT / "core" / "weights"
 CHECKPOINT = WEIGHTS_DIR / "zerodce_pp.pth"
 os.environ.setdefault("LUMENX_WEIGHTS_DIR", str(WEIGHTS_DIR))
