@@ -154,7 +154,7 @@ def main() -> int:
     total = len(records) * len(variants)
     engine = create_engine(
         config_path=str(args.config) if args.config else None,
-        device=args.device,
+        device=None if args.device == "auto" else args.device,
     )
     engine.warmup()
     completed = 0
