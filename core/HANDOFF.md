@@ -16,6 +16,23 @@ agent removed those conflicting packages before the large CUDA wheel transfer
 ended. Do not tag v0.4.1 until that environment is restored and the CPU/GPU tests
 and three real dark-photo runs complete. No real photos are present in this checkout.
 
+## Final backend completion inventory (2026-11-07)
+
+Read-only dataset discovery found LOL-v1 at
+`C:\Users\Manoj D\Desktop\CV_hackathon\LOLdataset\our485\low` (training only)
+and `C:\Users\Manoj D\Desktop\CV_hackathon\LOLdataset\eval15\low` (evaluation only),
+with paired `high` sibling directories. LOL-v2 Real is at
+`C:\Users\Manoj D\Desktop\CV_hackathon\LOL-v2\Real_captured\{Train,Test}\{Low,Normal}`
+and Synthetic is at `C:\Users\Manoj D\Desktop\CV_hackathon\LOL-v2\Synthetic\{Train,Test}\{Low,Normal}`.
+No LIME, NPE, DICM or college dataset directory exists under the discovered
+`C:\Users\Manoj D\Desktop\CV_hackathon` tree. They must be located before their
+required real-image check and final evaluation; no datasets were copied into the repo.
+
+The core virtual environment is currently missing Torch/OpenCV after the interrupted
+CUDA restoration transfer, so no CPU or GPU runtime/test/training/evaluation claim
+has been made after v0.4.1 candidate `c7cc01a`. Restore it using `constraints.txt`,
+then verify CUDA, ximgproc and the metric models before release work resumes.
+
 ## Current development status
 
 core-v0.2.0 was tagged on core at cd572df with the user's temporary performance
