@@ -69,13 +69,19 @@ class ModelRegistry:
             else:
                 self.warnings.append(EngineWarning("cpu_fallback", "CUDA is unavailable; trained models will use slower CPU inference."))
         for key, entry in checkpoint_manifest().items():
-            path = weights_directory() / entry["filename"]
+            filename = entry["filename"]
+            if key == "zerodce_pp" and cfg["models"]["zerodce_checkpoint"] == "finetuned":
+                filename = "zerodce_pp_finetuned.pth"
+            path = weights_directory() / filename
             if not path.is_file():
                 self.errors[key] = "missing_weights"
                 continue
             try:
                 digest = sha256(path.read_bytes()).hexdigest()
-                if digest != entry["sha256"]:
+                expected_digest = ("90d375b5b00a2d413d0baf0e382d9dbf8128ba9e8ff30b84b797965a8a5ea65f"
+                                   if key == "zerodce_pp" and filename == "zerodce_pp_finetuned.pth"
+                                   else entry["sha256"])
+                if digest != expected_digest:
                     self.errors[key] = "hash_mismatch"
                     continue
                 if key.startswith("cidnet"):

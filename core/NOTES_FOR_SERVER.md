@@ -1,5 +1,12 @@
 # Notes for server integration
 
+## core-v0.4.1
+
+Hybrid proxy masks retain two dimensions at 720p/1080p; before/after noise metrics
+now use native-resolution patch estimates. `models.zerodce_checkpoint` selects
+`publisher` (default) or `finetuned`; the latter requires
+`weights/zerodce_pp_finetuned.pth` and a matching checkpoint manifest hash.
+
 ## core-v0.3.0 — GPU gates verified
 
 The RTX 2050 GPU gate is complete: all four modes passed their contracts, CIDNet

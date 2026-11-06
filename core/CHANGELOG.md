@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.1 — 2026-11-07
+
+- Fixed hybrid tuner proxy validity mask shape for HD/FHD inputs; request noise
+  metrics use native-resolution patch estimates.
+- Added regression coverage for 720p/1080p non-black flat/noisy hybrid on CPU and GPU.
+- Ported GPU Zero-DCE++ no-reference training, with a selectable fine-tuned weight.
+- Training credit: Mohith-D05 (PR #1), ported from the read-only snapshot.
+- GPU fine-tuning: 10 epochs total on the 485 images in LOL-v1 `our485/low`,
+  initialized from the publisher checkpoint. The first 3 epochs were resumed from
+  the checkpoint after the command session ended; subsequent seven epochs completed.
+- Fine-tuned SHA256: `90d375b5b00a2d413d0baf0e382d9dbf8128ba9e8ff30b84b797965a8a5ea65f`.
+- CPU suite: 359 passed, 13 GPU cases deselected; Ruff clean. User-confirmed prior
+  GPU run: 39 passed across hybrid, metrics and model tests.
+
 ## 0.4.0 — 2026-11-06
 
 - Fixed native noise support accounting and checkerboard flatness detection; synthetic

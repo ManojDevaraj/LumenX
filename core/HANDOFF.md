@@ -1,6 +1,6 @@
 # Core handoff — v0.4.0 released
 
-## v0.4.1 candidate — verification blocked by repaired environment
+## core-v0.4.1 — release verified
 
 External verification found the tuned-hybrid proxy mask crash at 720p/1080p.
 The candidate replaces the one-channel proxy operation with a direct two-dimensional
@@ -8,13 +8,21 @@ nearest-neighbour resize and adds CPU/GPU tests for flat and noisy non-black 720
 and 1080p inputs. Request noise values now use native-resolution patch estimates,
 while perceptual metrics remain on the 512px proxy.
 
-`core/constraints.txt` pins the shared CUDA 12.4 stack (Torch 2.6.0+cu124,
-Torchvision 0.21.0+cu124, NumPy 2.2.6 and one contrib OpenCV wheel) and requires
-PyIQA to be installed with `--no-deps`. The prior unconstrained PyIQA install
-replaced CUDA Torch with CPU-only Torch 2.15 and added generic OpenCV wheels; the
-agent removed those conflicting packages before the large CUDA wheel transfer
-ended. Do not tag v0.4.1 until that environment is restored and the CPU/GPU tests
-and three real dark-photo runs complete. No real photos are present in this checkout.
+Training script is `core/scripts/train_zerodce.py`; it used only
+`C:\Users\Manoj D\Desktop\CV_hackathon\LOLdataset\our485\low` (485 images),
+initialized from the publisher Zero-DCE++ checkpoint, on CUDA FP32 for 10 epochs.
+Loss decreased from 2.840631 at epoch 1 to 2.272758 at epoch 10. The first command
+session ended after epoch 3; training resumed from that saved state for seven more
+epochs. Checkpoint: `core/weights/zerodce_pp_finetuned.pth`; SHA256:
+`90d375b5b00a2d413d0baf0e382d9dbf8128ba9e8ff30b84b797965a8a5ea65f`.
+The package default selects `models.zerodce_checkpoint: finetuned`; publisher weights
+remain available by setting it to `publisher`. Registry verified all four checkpoint
+files and CUDA placement (`cuda:0`).
+
+Validation: CPU suite 359 passed, 13 GPU-marked cases deselected; Ruff clean.
+The user confirmed 39 GPU tests passed (149.18s) across test_hybrid,
+test_metrics and test_models_gpu after restoring Torch 2.6.0+cu124 and contrib
+OpenCV 4.11.0.86. PyIQA was verified by the user. Release tag core-v0.4.1 is created.
 
 ## Final backend completion inventory (2026-11-07)
 

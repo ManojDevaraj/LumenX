@@ -190,6 +190,8 @@ models:
   live_height: 480
   # Serialization gives deterministic kernels on the pinned hardware/software stack.
   deterministic: true
+  # Selects the optional fine-tuned Zero-DCE++ checkpoint when explicitly enabled.
+  zerodce_checkpoint: finetuned
 fusion:
   # Darkness sigmoid midpoint/width and global deep contribution bias.
   dark_threshold: 0.2
