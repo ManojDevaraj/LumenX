@@ -1,6 +1,14 @@
 # Notes for server integration
 
-## v0.3.0.dev0 — development only; GPU gates pending
+## core-v0.3.0 — GPU gates verified
+
+The RTX 2050 GPU gate is complete: all four modes passed their contracts, CIDNet
+LOLv2-real and SID ran FP16 with no fallback, and native hybrid processing completed
+at 1080p and 12 MP without OOM. Tiling, fusion and one cached-deep-output repair
+were verified; resident peak VRAM was 407 MiB. v0.4 tuner and metrics work is now
+in progress. Latency remains reported rather than release-blocking by approved scope.
+
+## v0.3.0.dev0 — historical development note
 
 Latest released tag is core-v0.2.0. Branch code now wires registry/wrappers, tiled
 inference, direct baselines, confidence fusion, live and one cached-output repair.

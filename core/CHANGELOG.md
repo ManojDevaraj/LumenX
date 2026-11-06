@@ -1,6 +1,21 @@
 # Changelog
 
-## 0.3.0.dev0 — in progress, GPU gates not verified
+## 0.4.0.dev0 — in progress
+
+- Fixing diagnosis/noise, denoise, brightness-restraint review findings and adding
+  the 12-candidate tuner, full MetricSuite, request-time metrics and final report.
+- Tuner scoring recipe is `clipiqa+custom`; latency is reported, not a release gate.
+  Confidence-validation and live/webcam tuning are deferred by approved scope.
+
+## 0.3.0 — 2026-11-06
+
+- GPU release gates verified on the RTX 2050: all four mode contracts, both CIDNet
+  checkpoints in FP16 with no fallback, and hybrid at 1080p and 12 MP without OOM.
+- Verified cosine tiling, fusion and the bounded single repair reusing cached deep
+  output. Resident peak VRAM was 407 MiB.
+- Latency is retained as a reported metric rather than a v0.3 release gate.
+
+## 0.3.0.dev0 — superseded by 0.3.0
 
 - Official CIDNet/Zero-DCE++ architectures with provenance/licence notices.
 - SHA256 manifest/downloader and verified official Zero-DCE++ checkpoint.

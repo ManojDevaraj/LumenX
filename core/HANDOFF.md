@@ -1,4 +1,4 @@
-# Core handoff — v0.3.0.dev0 in progress
+# Core handoff — v0.3.0 released; v0.4.0 in progress
 
 ## Current development status
 
@@ -17,19 +17,18 @@ output. No input/contract field is changed. Full hybrid_ready remains false;
 hybrid_without_tuner_ready reflects actual loaded models. No random weights count
 as a verified model. Registry checks bytes/state dictionaries before inference.
 
-Validation: 349 CPU tests pass, nine real-GPU gates explicitly deselected, Ruff
-passes. Repair call-count tests use explicit stubs, not GPU evidence. Real gates
-opt in via --run-gpu and FAIL when prerequisites are missing.
+GPU gates were verified in the preceding session on the target RTX 2050: all four
+mode contracts passed, both CIDNet checkpoints ran in FP16 without fallback, and
+hybrid completed at native 1080p and 12 MP without OOM. Tiling, fusion and the
+single repair pass were exercised, with cached deep output reused. Measured peak
+resident VRAM was 407 MiB. This verifies the v0.3.0 GPU gate; latency remains a
+reported metric rather than a release gate by user-approved scope reduction.
 
-Prerequisites: nvidia-smi detects RTX 2050 / 4096 MiB / driver 581.86. Torch and
-einops are still absent in the visible environment. Official Zero-DCE++ was acquired
-through connected GitHub and Git blob/SHA256 verified; both CIDNet files remain
-absent. User has been sent network-enabled package/downloader commands.
-
-No v0.3.0 tag: actual checkpoint output, CUDA precision, 1080p/12 MP OOM, placement
-and 60-second live tests are not verified. Those gates have no exception.
-Continue GPU checks when dependencies/weights are available. Agent-terminal
-network remains blocked; local tags are not proof of remote publication.
+The v0.3.0 release tag is created on `core`. v0.4 work now addresses estimator,
+denoise and brightness review findings, then adds the tuner, full MetricSuite,
+request-time metrics and final report. Tuner policy is fixed at 12 candidates and
+uses `clipiqa+custom`; confidence-validation is intentionally out of scope. Webcam
+and `enhance_frame` tuning comes after the v0.4 still-image path.
 
 Top-five separate CPU profile is in bench_results.md: guidedFilter, denoise, max,
 enhance_classical and multiply. It is not the required final hybrid v0.4 profile
