@@ -238,6 +238,28 @@ async function setupHero() {
     setHint(touch ? 'Tap to flood the scene with light' : 'Move your light · click to flood the scene');
   }
   setupStory(manifest);
+  setupAbout(manifest);
+}
+
+// About page: each pipeline step shows the recorded run's real output and the engine's own log line.
+function setupAbout(manifest) {
+  const byName = Object.fromEntries((manifest.stages || []).map((stage) => [stage.name, stage]));
+  $('about-hero-image').src = SHOWCASE + manifest.restored;
+  $('about-hero-caption').textContent = `${manifest.title} · restored by ${methodLabel(manifest.method)} · ${manifest.attribution}`;
+  for (const step of $$('.step[data-stage]')) {
+    const stage = byName[step.dataset.stage];
+    const image = step.querySelector('img');
+    const log = step.querySelector('.step-log');
+    if (step.dataset.stage === 'final') {
+      image.src = SHOWCASE + manifest.restored;
+      log.textContent = `Engine: ${methodLabel(manifest.method)} run finished in ${(manifest.total_ms / 1000).toFixed(1)} s on ${String(manifest.device || 'cpu').toUpperCase()}.`;
+      continue;
+    }
+    if (!stage) { step.querySelector('.step-media').hidden = true; log.hidden = true; continue; }
+    image.src = SHOWCASE + stage.image;
+    image.loading = 'lazy';
+    log.textContent = `Engine: ${stage.caption}`;
+  }
 }
 
 // Wraps each character of a heading so CSS can stagger it in; inline elements such as <em> keep their styling.
