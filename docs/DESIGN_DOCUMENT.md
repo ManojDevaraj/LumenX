@@ -8,8 +8,8 @@ _Also available as PDF: [`Hackathon_Technical_Solution_Report_LumenX.pdf`](Hacka
 | Problem Title | Robust Low-Light Image Restoration and Enhancement |
 | Team Name | Black Rock |
 | Team Members | Nikhil Sridhara — 1RUA24CSE0283; Manoj D — 1RUA24CSE0242; Mohit D — 1RUA24CSE0280 |
-| GitHub Repository | https://github.com/ManojDevaraj/LumenX — branch main, commit b096195 (engine tag core-v0.4.3) |
-| Live Demo / Deployment | Local FastAPI web app (uvicorn, RTX 2050 laptop); Video demo: [link to be added] |
+| GitHub Repository | https://github.com/ManojDevaraj/LumenX — branch main, commit 2023be2 (engine tag core-v0.4.3) |
+| Live Demo / Deployment | https://chitchat-plaything-crewman.ngrok-free.dev (FastAPI app on RTX 2050 GPU via ngrok); Video demo: [link to be added] |
 
 ## 1. Problem Understanding & Solution Strategy
 

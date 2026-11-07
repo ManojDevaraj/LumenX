@@ -27,6 +27,8 @@ A deep model recovers the scene; classical vision repairs only what the network 
 
 ---
 
+**Live demo:** https://chitchat-plaything-crewman.ngrok-free.dev (runs on the team's RTX 2050 laptop through an ngrok tunnel; on first visit, click "Visit Site").
+
 ## The problem
 
 Photos taken at night or indoors are dark, noisy and unevenly lit. Brightening them is easy; brightening them **well** is not:
