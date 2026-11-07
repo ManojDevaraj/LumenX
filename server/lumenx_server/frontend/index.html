@@ -10,6 +10,7 @@
 </head>
 <body>
   <div class="grain" aria-hidden="true"></div>
+  <div class="chart-tip" data-role="chart-tip" role="tooltip" hidden></div>
   <div class="cursor" data-role="cursor" aria-hidden="true"><span class="cursor-ring"></span><span class="cursor-dot"></span></div>
   <div class="aurora" aria-hidden="true"><span></span><span></span></div>
 
@@ -26,8 +27,9 @@
       </a>
       <nav class="main-nav" aria-label="Main sections" data-role="navigation">
         <button class="nav-tab is-active" data-role="tab-enhance" data-tab="enhance">Enhance</button>
+        <button class="nav-tab" data-role="tab-benchmarks" data-tab="benchmarks">Results</button>
         <button class="nav-tab" data-role="tab-live" data-tab="live">Live</button>
-        <button class="nav-tab" data-role="tab-benchmarks" data-tab="benchmarks">Benchmarks</button>
+        <button class="nav-tab" data-role="tab-about" data-tab="about">About</button>
       </nav>
       <div class="health" data-role="health"><span class="status-dot"></span><span data-role="health-label">Connecting</span><span class="mock-badge" data-role="mock-badge" hidden>MOCK ENGINE</span></div>
     </header>
@@ -242,17 +244,97 @@
         <div class="live-stats mono" data-role="live-stats">Camera is off</div>
       </section>
 
-      <section class="tab-panel benchmarks-panel" data-role="panel-benchmarks" data-panel="benchmarks" hidden>
+      <section class="tab-panel results-panel" data-role="panel-benchmarks" data-panel="benchmarks" hidden>
         <div class="page-heading">
-          <span class="eyebrow"><span class="eyebrow-line"></span>Evaluation</span>
-          <h1>Quality across the <em>hard</em> cases.</h1>
-          <p>Tables and charts appear as dataset evaluation runs complete.</p>
+          <span class="eyebrow"><span class="eyebrow-line"></span>Results &amp; performance</span>
+          <h1>Measured, not <em>claimed</em>.</h1>
+          <p>Every number on this page is read live from the evaluation results the engine produced. Nothing here is typed in by hand.</p>
         </div>
-        <div class="benchmark-content surface" data-role="benchmark-content"><span class="label">No runs yet</span><p>Start the evaluation scripts from the server folder to populate benchmark results.</p></div>
+        <div class="benchmark-content surface" data-role="benchmark-content"><span class="label">Loading results</span><p>Reading the evaluation summary…</p></div>
+
+        <div class="results" data-role="results" hidden>
+          <div class="callouts" data-role="result-callouts"></div>
+
+          <section class="results-block">
+            <div class="block-head"><span class="index">01</span><div><h3>Head-to-head</h3><p data-role="headline-caption"></p></div></div>
+            <div class="table-wrap"><table class="results-table" data-role="headline-table"></table></div>
+            <p class="table-note">Arrows show which direction is better. The best value in each column is highlighted.</p>
+          </section>
+
+          <section class="results-block">
+            <div class="block-head"><span class="index">02</span><div><h3>What each part contributes</h3><p data-role="ablation-caption"></p></div></div>
+            <div class="ablation-charts" data-role="ablation-chart"></div>
+            <div class="ablation-notes" data-role="ablation-notes"></div>
+          </section>
+
+          <section class="results-block duo-results">
+            <article class="surface">
+              <div class="block-head"><span class="index">03</span><div><h3>Fine-tuning</h3><p>Was it worth retraining the curve model on our data?</p></div></div>
+              <div data-role="finetune-panel"></div>
+            </article>
+            <article class="surface">
+              <div class="block-head"><span class="index">04</span><div><h3>Known limitations</h3><p>Where LumenX still struggles, stated plainly.</p></div></div>
+              <ul class="limit-list" data-role="limitations"></ul>
+            </article>
+          </section>
+
+          <section class="results-block">
+            <div class="block-head"><span class="index">05</span><div><h3>Failure analysis</h3><p>Runs the engine's own safety audit flagged during evaluation.</p></div><span class="muted mono" data-role="failure-count"></span></div>
+            <div class="flag-summary" data-role="failure-summary"></div>
+            <div class="table-wrap"><table class="results-table is-compact is-failures" data-role="failure-table"></table></div>
+          </section>
+
+          <section class="results-block">
+            <div class="block-head"><span class="index">06</span><div><h3>All datasets</h3><p>Pick a dataset to see every evaluated configuration.</p></div></div>
+            <div class="dataset-picker" data-role="dataset-picker" role="tablist" aria-label="Datasets"></div>
+            <div class="table-wrap"><table class="results-table is-compact" data-role="dataset-table"></table></div>
+            <p class="table-note" data-role="results-notice"></p>
+          </section>
+        </div>
+      </section>
+
+      <section class="tab-panel about-panel" data-role="panel-about" data-panel="about" hidden>
+        <div class="page-heading">
+          <span class="eyebrow"><span class="eyebrow-line"></span>About the method</span>
+          <h1>How LumenX <em>sees</em> in the dark.</h1>
+          <p>LumenX first diagnoses a photo: where light is weak, how noisy it is, and how much real signal survived. It restores the scene with CIDNet, a deep model, then repairs blown highlights pixel by pixel, removes noise only where brightening amplified it, and audits the result with safety checks. Every step is shown, so the result can be inspected instead of trusted blindly.</p>
+        </div>
+
+        <div class="pipeline-diagram" aria-label="LumenX pipeline">
+          <div class="pd-node"><span class="pd-step mono">01</span><strong>Diagnose</strong><p>Measures light level, noise and how much signal was recorded.</p></div>
+          <div class="pd-node"><span class="pd-step mono">02</span><strong>CIDNet</strong><p>A deep model brightens the scene in a colour space built for low light.</p></div>
+          <div class="pd-node"><span class="pd-step mono">03</span><strong>Highlight repair</strong><p>Blends in a protected copy wherever lamps and windows would blow out.</p></div>
+          <div class="pd-node"><span class="pd-step mono">04</span><strong>Denoise</strong><p>Cleans grain only where the brightening amplified it.</p></div>
+          <div class="pd-node"><span class="pd-step mono">05</span><strong>Audit</strong><p>Checks highlights, colour shift, detail and halos, and reports every result.</p></div>
+        </div>
+
+        <div class="about-grid">
+          <article class="surface team-card">
+            <span class="label">Team</span>
+            <h3 class="team-name">Black Rock</h3>
+            <ol class="team-list">
+              <li>Nikhil Sridhara</li>
+              <li>Manoj D</li>
+              <li>Mohit D</li>
+            </ol>
+            <a class="sp-cta" href="https://github.com/ManojDevaraj/LumenX" target="_blank" rel="noopener">Source on GitHub →</a>
+          </article>
+          <article class="surface credits-card">
+            <span class="label">Credits &amp; licences</span>
+            <dl class="credits">
+              <dt>HVI-CIDNet</dt><dd>Architecture and weights by Fediory Feng et al., MIT licence.</dd>
+              <dt>Zero-DCE++</dt><dd>Li, Guo &amp; Loy, IEEE TPAMI 2021. CC BY-NC 4.0: non-commercial research use only.</dd>
+              <dt>LOL-v1</dt><dd>Low-light paired dataset, Wei et al., BMVC 2018. Used for evaluation only.</dd>
+              <dt>Demo photos</dt><dd>Abigail Keenan, Fons Heijnsbroek, Julien (domsson) and Julio Lopez on Unsplash (Unsplash Licence); LIME benchmark images via the Zero-DCE repository.</dd>
+              <dt>Type</dt><dd>Mona Sans and Geist Mono (SIL Open Font Licence); Boska (ITF Free Font Licence).</dd>
+            </dl>
+          </article>
+        </div>
       </section>
     </main>
-    <footer class="footer"><span>Black Rock · LumenX</span><span>Input evidence guides the lift.</span></footer>
+    <footer class="footer"><span>Black Rock · Nikhil Sridhara, Manoj D, Mohit D</span><span>Input evidence guides the lift.</span></footer>
   </div>
+  <script src="/static/config.js"></script>
   <script type="module" src="/static/app.js"></script>
 </body>
 </html>

@@ -13,6 +13,7 @@ export function createRelight(canvas, baseUrl, illuminationUrl, gammaInput, expo
 
   const load = (url) => new Promise((resolve, reject) => {
     const image = new Image();
+    image.crossOrigin = 'anonymous';
     image.onload = () => resolve(image);
     image.onerror = () => reject(new Error('Relight texture failed to load.'));
     image.src = url;

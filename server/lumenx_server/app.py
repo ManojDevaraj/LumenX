@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import time
 from contextlib import asynccontextmanager
 from io import BytesIO
@@ -13,6 +14,7 @@ from typing import Any
 
 import numpy as np
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from PIL import Image, UnidentifiedImageError
@@ -87,6 +89,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=lifespan,
     )
     app.state.settings = config
+    # Lets a separately hosted frontend (e.g. on Vercel) call this API. Off unless origins are configured:
+    # LUMENX_CORS_ORIGINS="https://lumenx.vercel.app,http://localhost:3000"
+    cors_origins = [origin.strip() for origin in os.environ.get("LUMENX_CORS_ORIGINS", "").split(",") if origin.strip()]
+    if cors_origins:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=cors_origins,
+            allow_methods=["GET", "POST"],
+            allow_headers=["*"],
+            expose_headers=["Retry-After"],
+        )
     app.mount("/files/runs", StaticFiles(directory=config.runs_dir), name="run-files")
     app.mount("/files/gallery", StaticFiles(directory=config.gallery_dir), name="gallery-files")
     app.mount("/files/results", StaticFiles(directory=config.results_dir), name="result-files")

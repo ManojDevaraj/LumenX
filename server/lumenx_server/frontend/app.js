@@ -1,4 +1,5 @@
-import { enhanceImage, getBenchmarks, getConfig, getGallery, getHealth, streamEnhance } from './api.js';
+import { enhanceImage, getBenchmarks, getConfig, getGallery, getHealth, getText, liveSocketUrl, streamEnhance } from './api.js';
+import { renderResults } from './results.js';
 import { createRelight } from './relight.js';
 import { createFlashlight } from './flashlight.js';
 import { createRelief } from './relief.js';
@@ -863,6 +864,7 @@ function drawRidgelines(canvas, url) {
   let hoverRow = -1;
   let progress = reducedMotion ? 1 : 0;
   const image = new Image();
+  image.crossOrigin = 'anonymous';
   const render = () => {
     if (!samples || disposed) return;
     const ratio = window.devicePixelRatio || 1;
@@ -1104,40 +1106,26 @@ function renderCompareTable(cards) {
   }
 }
 
+let benchmarksLoaded = false;
 async function loadBenchmarks() {
+  if (benchmarksLoaded) return;
   const container = $('benchmark-content');
   try {
     const payload = await getBenchmarks();
-    container.replaceChildren();
-    if (payload.status === 'not_ready') {
-      container.append(node('span', 'label', payload.progress ? 'Evaluation in progress' : 'No runs yet'));
-      container.append(node('p', '', payload.progress ? JSON.stringify(payload.progress) : 'Start the evaluation scripts from the server folder to populate benchmark results.'));
+    if (payload.status === 'not_ready' || !payload.tables) {
+      container.replaceChildren(node('span', 'label', payload.progress ? 'Evaluation in progress' : 'No results yet'));
+      container.append(node('p', '', payload.progress ? 'The evaluation is still running; results appear here when it finishes.' : 'Run the evaluation scripts in the server folder to publish results.'));
       return;
     }
-    for (const [name, rows] of Object.entries(payload.tables || {})) {
-      container.append(node('h3', '', name));
-      const table = node('table', 'benchmark-table');
-      const entries = Array.isArray(rows) ? rows : [];
-      if (entries.length) {
-        const columns = Object.keys(entries[0]);
-        const head = node('tr');
-        columns.forEach((column) => head.append(node('th', '', column)));
-        table.append(head);
-        entries.forEach((entry) => {
-          const row = node('tr');
-          columns.forEach((column) => row.append(node('td', '', valueText(entry[column]))));
-          table.append(row);
-        });
-      }
-      container.append(table);
-    }
-    for (const chart of payload.charts || []) {
-      const image = node('img');
-      image.src = chart.url || chart;
-      image.alt = chart.title || 'Benchmark chart';
-      container.append(image);
-    }
-  } catch (error) { container.textContent = error.message; }
+    // The failure review is optional; the page still renders without it.
+    const failureCsv = await getText('/files/results/failure_review.csv').catch(() => null);
+    renderResults($('panel-benchmarks'), payload, failureCsv);
+    container.hidden = true;
+    $('results').hidden = false;
+    benchmarksLoaded = true;
+  } catch (error) {
+    container.replaceChildren(node('span', 'label', 'Results unavailable'), node('p', '', friendlyError(error)));
+  }
 }
 
 async function startCamera() {
@@ -1148,8 +1136,7 @@ async function startCamera() {
     const video = $('camera-video');
     video.srcObject = state.camera;
     await video.play();
-    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    state.socket = new WebSocket(`${protocol}//${location.host}/live`);
+    state.socket = new WebSocket(liveSocketUrl());
     state.socket.binaryType = 'blob';
     state.socket.onopen = () => {
       $('camera-button').firstElementChild.textContent = 'Stop camera';

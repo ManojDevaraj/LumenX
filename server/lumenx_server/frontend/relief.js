@@ -222,6 +222,7 @@ export function createRelief(canvas, photoUrl, heightUrl, { reducedMotion = fals
 function loadImage(url) {
   return new Promise((resolve, reject) => {
     const image = new Image();
+    image.crossOrigin = 'anonymous';
     image.onload = () => resolve(image);
     image.onerror = () => reject(new Error('Relief texture failed to load.'));
     image.src = url;
