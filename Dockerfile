@@ -40,6 +40,8 @@ RUN if [ "$SKIP_WEIGHTS" != "1" ]; then \
       python core/scripts/download_weights.py && \
       python -c "import pyiqa; [pyiqa.create_metric(m, device='cpu') for m in ('clipiqa', 'musiq', 'lpips')]"; \
     fi
+# Real night photos for the demo gallery (Unsplash / LIME; git-ignored, so fetched at build time).
+RUN python server/scripts/fetch_demo_photos.py || echo "gallery photos unavailable; synthetic gallery only"
 
 EXPOSE 7860
 CMD ["python", "-m", "uvicorn", "lumenx_server.main:app", "--app-dir", "server", "--host", "0.0.0.0", "--port", "7860"]
