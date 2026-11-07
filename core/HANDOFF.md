@@ -13,6 +13,13 @@
 - The `no_dl` ablation retains its existing classical-only fusion fallback to
   preserve the frozen stage schedule. Step 1 regression gate: 22 passed.
 
+## core-v0.4.2 development — metrics work in progress
+
+- MetricSuite now attempts SSIM/LPIPS (paired) and NIQE/BRISQUE/CLIP-IQA/MUSIQ
+  (unpaired) through pinned PyIQA, selecting CUDA whenever it is available and
+  preserving a reason when a model cannot run. PSNR and `psnr_gt_mean` remain
+  direct numerical measurements.
+
 External verification found the tuned-hybrid proxy mask crash at 720p/1080p.
 The candidate replaces the one-channel proxy operation with a direct two-dimensional
 nearest-neighbour resize and adds CPU/GPU tests for flat and noisy non-black 720p
