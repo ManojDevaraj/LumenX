@@ -14,6 +14,8 @@ from .diagnose import luminance, native_noise
 
 _CLIPIQA: Any | None = None
 _CLIPIQA_ERROR: str | None = None
+_IQA: dict[str, Any] = {}
+_IQA_ERRORS: dict[str, str] = {}
 
 
 def clipiqa_batch(images: list[np.ndarray]) -> list[float] | None:
@@ -30,7 +32,30 @@ def clipiqa_batch(images: list[np.ndarray]) -> list[float] | None:
         with torch.inference_mode():
             return [float(value) for value in _CLIPIQA(batch).detach().cpu().reshape(-1)]
     except Exception as exc:  # optional model dependency must never break processing
-        _CLIPIQA_ERROR = f"CLIP-IQA unavailable: {type(exc).__name__}."
+        _CLIPIQA_ERROR = f"CLIP-IQA unavailable: {type(exc).__name__}: {exc}"
+        return None
+
+
+def _iqa(name: str, images: list[np.ndarray], reference: list[np.ndarray] | None = None) -> list[float] | None:
+    """Run a pyiqa metric on its preferred GPU, recording an honest failure reason."""
+    if not images or name in _IQA_ERRORS:
+        return None
+    try:
+        if name not in _IQA:
+            import pyiqa
+            _IQA[name] = pyiqa.create_metric(name, device="cuda" if _cuda_available() else "cpu")
+        import torch
+        batch = torch.from_numpy(np.stack(images)).permute(0, 3, 1, 2).float().div_(255)
+        with torch.inference_mode():
+            values = _IQA[name](batch) if reference is None else _IQA[name](batch, torch.from_numpy(
+                np.stack(reference)).permute(0, 3, 1, 2).float().div_(255))
+        result = [float(value) for value in values.detach().cpu().reshape(-1)]
+        if not all(np.isfinite(result)):
+            _IQA_ERRORS[name] = f"{name.upper()} returned a non-finite value."
+            return None
+        return result
+    except Exception as exc:
+        _IQA_ERRORS[name] = f"{name.upper()} unavailable: {type(exc).__name__}: {exc}"
         return None
 
 
@@ -148,7 +173,7 @@ class ClassicalMetricSuite:
         self._cfg = cfg
 
     def paired(self, pred: np.ndarray, gt: np.ndarray) -> dict[str, float | None]:
-        """Measure raw/GT-mean PSNR; perceptual/SSIM metrics arrive with full IQA."""
+        """Measure paired metrics with PyIQA on GPU when it is available."""
         validate_metric_image(pred)
         validate_metric_image(gt)
         if pred.shape != gt.shape:
@@ -162,13 +187,21 @@ class ClassicalMetricSuite:
             error = float(np.mean((rescaled - gt) ** 2))
             if error > 0:
                 adjusted = float(10 * np.log10(255**2 / error))
+        ssim = _iqa("ssim", [pred], [gt])
+        lpips = _iqa("lpips", [pred], [gt])
         return {"psnr": float(10 * np.log10(255**2 / mse)) if mse > 0 else None,
-                "psnr_gt_mean": adjusted, "ssim": None, "lpips": None}
+                "psnr_gt_mean": adjusted, "ssim": None if ssim is None else ssim[0],
+                "lpips": None if lpips is None else lpips[0]}
 
     def unpaired(self, img: np.ndarray) -> dict[str, float | None]:
-        """Return optional CLIP-IQA plus honestly unavailable unintegrated metrics."""
+        """Return no-reference PyIQA metrics on GPU when installed."""
         validate_metric_image(img)
-        return {"niqe": None, "brisque": None, "clipiqa": (clipiqa_batch([img]) or [None])[0], "musiq": None}
+        values = {name: _iqa(name, [img]) for name in ("niqe", "brisque", "musiq")}
+        clip = clipiqa_batch([img])
+        return {"niqe": None if values["niqe"] is None else values["niqe"][0],
+                "brisque": None if values["brisque"] is None else values["brisque"][0],
+                "clipiqa": None if clip is None else clip[0],
+                "musiq": None if values["musiq"] is None else values["musiq"][0]}
 
     def custom(self, inp: np.ndarray, out: np.ndarray) -> dict[str, float | None]:
         """Return native-resolution custom metrics; caller chooses evaluation resolution."""
@@ -192,12 +225,12 @@ class ClassicalMetricSuite:
 
     def unavailable(self) -> dict[str, str]:
         """Supply reasons for every conditionally or permanently unavailable metric."""
-        reasons = dict.fromkeys(("niqe", "brisque", "musiq", "lpips", "ssim",
-                                "err_recovered", "err_estimated", "err_unrecoverable",
+        reasons = dict.fromkeys(("err_recovered", "err_estimated", "err_unrecoverable",
                                 "recovered_pct", "estimated_pct", "unrecoverable_pct"),
                                "Not implemented in the classical-only v0.2.0 milestone.")
         if _CLIPIQA_ERROR is not None:
             reasons["clipiqa"] = _CLIPIQA_ERROR
+        reasons.update(_IQA_ERRORS)
         reasons.update({
             "psnr": "An exact match has infinite PSNR; returned as None.",
             "psnr_gt_mean": "Zero prediction mean or an exact adjusted match is undefined/infinite.",
@@ -227,7 +260,7 @@ def request_metrics(inp: np.ndarray, out: np.ndarray, valid: np.ndarray, cfg: En
     suite = ClassicalMetricSuite(cfg)
     learned_before, learned_after = suite.unpaired(first), suite.unpaired(last)
     unavailable = suite.unavailable()
-    reasons.update({key: unavailable[key] for key in ("niqe", "brisque", "musiq")})
+    reasons.update({key: unavailable[key] for key in ("niqe", "brisque", "musiq") if key in unavailable})
     if learned_before["clipiqa"] is None:
         reasons["clipiqa"] = unavailable.get("clipiqa", "CLIP-IQA is unavailable.")
     for suffix, field in (("in", "before"), ("out", "after")):

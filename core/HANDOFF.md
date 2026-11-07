@@ -2,6 +2,37 @@
 
 ## core-v0.4.1 — release verified
 
+## core-v0.4.2 development — Step 1
+
+- Kept the reviewed publisher Zero-DCE++ default. Replaced the partial hybrid
+  wiring with a CIDNet-anchored full-resolution path: only clipped (>=0.98) or
+  hotspot-overshoot pixels are softly guided toward CIDNet's own tanh highlight
+  shoulder. Classical output is not a highlight-fusion source.
+- Removed recoverability gain enforcement from denoise, including its early
+  bypass, so denoise is a texture correction and does not darken CIDNet output.
+- The `no_dl` ablation retains its existing classical-only fusion fallback to
+  preserve the frozen stage schedule. Step 1 regression gate: 22 passed.
+
+## core-v0.4.2 development — black invariant repair
+
+- Lab CLAHE could introduce a quantised pedestal into a pure black frame.
+  Classical recomposition now masks pixels with zero input signal and zero local
+  variance after colour processing, keeping black input black without weakening
+  the shape test. Full suite: 359 passed, 13 GPU tests deselected; Ruff clean.
+
+## core-v0.4.2 development — Step 3
+
+- Recoverability now adds denoise strength only on joint near-black, locally
+  flat pixels. It does not alter exposure or apply a gain cap, including in the
+  conservative guardrail path. Regression gate: 22 passed; Ruff clean.
+
+## core-v0.4.2 development — metrics work in progress
+
+- MetricSuite now attempts SSIM/LPIPS (paired) and NIQE/BRISQUE/CLIP-IQA/MUSIQ
+  (unpaired) through pinned PyIQA, selecting CUDA whenever it is available and
+  preserving a reason when a model cannot run. PSNR and `psnr_gt_mean` remain
+  direct numerical measurements.
+
 External verification found the tuned-hybrid proxy mask crash at 720p/1080p.
 The candidate replaces the one-channel proxy operation with a direct two-dimensional
 nearest-neighbour resize and adds CPU/GPU tests for flat and noisy non-black 720p
@@ -203,3 +234,19 @@ authorized by the user's current instruction. Work stops here for review.
 ## Review boundary
 
 Stop at the first v0.1.0 tag. No v0.2.0 implementation before user review.
+
+
+## core-v0.4.2 - release
+
+- CIDNet-anchored hybrid with local guided highlight repair; output outside repair masks remains CIDNet. Denoise corrections are local, and recoverability smooths near-black flat texture without limiting exposure.
+- Twelve bounded tuner candidates with candidate 0 as the least-correction tie-break. PyIQA metrics emit finite scores or current-call unavailable reasons. The optional IQA extra pins setuptools==80.9.0 for CLIP-IQA.
+- User-reported LOL-v1 eval15 results for three images:
+
+  | Image | PSNR dl/hybrid | SSIM delta | LPIPS hybrid | Clipped dl/hybrid |
+  |---|---:|---:|---|---:|
+  | 1 | 23.48 / 23.42 dB | 0.001 | equal or better | 12.8% / 0.38% |
+  | 2 | 21.56 / 21.56 dB | 0.001 | equal or better | 0.36% / 0.09% |
+  | 3 | 25.33 / 25.33 dB | 0.001 | equal or better | 0% / 0% |
+
+- User-confirmed full suite: 359 passed, 13 GPU tests deselected. Step 5 targets passed.
+- Local release tag: core-v0.4.2.

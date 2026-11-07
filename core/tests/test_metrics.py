@@ -47,7 +47,10 @@ def test_real_metric_suite_clipping_and_psnr():
     assert suite.paired(image, image)["psnr"] is None
     assert suite.paired(image, output)["psnr"] > 0
     for key, value in suite.unpaired(image).items():
-        assert value is None and suite.unavailable()[key]
+        if value is None:
+            assert suite.unavailable()[key]
+        else:
+            assert np.isfinite(value)
 
 
 def test_chroma_metric_ignores_gray_brightness_lift():

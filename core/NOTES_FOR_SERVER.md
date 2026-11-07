@@ -88,3 +88,12 @@ The fake result uses the contract enum's method name for its corresponding mock
 path; `provenance.fake=true` and warnings identify that no neural inference ran.
 No server code or frozen docs were changed. This milestone does not include
 server I/O, CLI, models, actual enhancement algorithms, or evaluation orchestration.
+
+
+## core-v0.4.2
+
+Hybrid processing is CIDNet-anchored. Guided highlight repair changes only its local mask; denoise corrections stay within that mask. Recoverability smooths texture in near-black flat regions and never caps exposure. The tuner evaluates twelve bounded correction settings and prefers candidate 0 on ties.
+
+The optional core[iqa] extra now pins setuptools==80.9.0 for CLIP-IQA. MetricSuite reports current-call failure reasons; BRISQUE may be unavailable when PyIQA rejects an input shape. No server contract fields or stage names changed.
+
+User-reported LOL-v1 eval15, three images: PSNR dl/hybrid 23.48/23.42, 21.56/21.56, 25.33/25.33 dB; SSIM delta 0.001; LPIPS equal or better; clipped pixels 12.8/0.38%, 0.36/0.09%, and 0/0%. Full suite: 359 passed, 13 GPU tests deselected.
