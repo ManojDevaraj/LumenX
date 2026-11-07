@@ -239,6 +239,7 @@ class RealEngine:
         repair_attempted = False
         fallback_audit: list[dict[str, Any]] = []
         candidates = []
+        tuner_adjustment = {"highlight_repair": 1.0, "denoise_k": 0.0, "color_strength": 0.0, "exposure_trim": 1.0}
         scoring_recipe = "not_run"
         chosen_params = None
         try:
@@ -277,6 +278,7 @@ class RealEngine:
             if hybrid and "no_tuner" not in req.ablate:
                 with timer(timings, "tuner"):
                     candidates, candidate_visuals, chosen_params, scoring_recipe = tune(image, diagnosis, cfg, req.seed)
+                    tuner_adjustment = next(candidate.params for candidate in candidates if candidate.chosen)
                 for candidate, visual in zip(candidates, candidate_visuals):
                     yield StageEvent("candidate", visual.key, "Trying a light setting",
                                      "Compared this setting using fixed quality checks.",
@@ -335,10 +337,12 @@ class RealEngine:
             classical_image = classical.image if classical is not None else None
             if hybrid and not no_fusion:
                 with timer(timings, "fusion"):
-                    fused = (repair_deep(image, deep_image, diagnosis, cfg) if deep_image is not None else
+                    fused = (repair_deep(image, deep_image, diagnosis, cfg,
+                                         strength=tuner_adjustment["highlight_repair"]) if deep_image is not None else
                              fuse(image, None, classical_image, diagnosis, recovery, cfg,
                                   recovery_enabled=recovery_enabled))
                 output = fused.image
+                output = np.clip(output * tuner_adjustment["exposure_trim"], 0, 1)
                 with timer(timings, "render"):
                     visuals = [Visual("fused", uint8(output), "stage", 768, False),
                                Visual("fusion_map", uint8(fused.weights), "map", 512, True)]

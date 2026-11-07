@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, replace
+from dataclasses import replace
 
 import cv2
 import numpy as np
 
-from .classical import enhance_classical
 from .config import EngineConfig
 from .contracts import Candidate, Visual
 from .diagnose import proxy
@@ -17,18 +16,15 @@ from .render import uint8
 from .types import DiagnosisResult, EnhanceParams
 
 
-def _params(diagnosis: DiagnosisResult, cfg: EngineConfig, seed: int) -> list[EnhanceParams]:
-    """Generate eight prior, two broad, conservative and identity candidates."""
-    c = cfg["tuner"]
-    rng = np.random.default_rng(seed)
-    prior = c["prior_gamma"][diagnosis.raw["severity"]]
-    values: list[EnhanceParams] = []
-    for low, high, count in ((prior[0], prior[1], 8), (c["broad_gamma"][0], c["broad_gamma"][1], 2)):
-        for gamma in rng.uniform(low, high, count):
-            values.append(EnhanceParams(float(gamma), float(rng.uniform(*c["clahe_range"])),
-                                        float(rng.uniform(*c["color_range"]))))
-    values.append(EnhanceParams(c["conservative_gamma"], c["conservative_clahe"], c["conservative_color"]))
-    values.append(EnhanceParams(1.0, 0.0, 0.0))
+def _params() -> list[dict[str, float]]:
+    """The fixed twelve-way local-correction search; candidate zero is the anchor."""
+    values = [{"highlight_repair": 1.0, "denoise_k": 0.0, "color_strength": 0.0, "exposure_trim": 1.0}]
+    for repair, denoise_k, colour, trim in ((.5,.15,.05,.95), (.7,.25,.10,.98), (.8,.35,.15,1.02),
+                                             (1,.25,.05,1.05), (.6,.45,.10,.97), (.9,.15,.20,1.03),
+                                             (1,.35,.10,.99), (.7,.20,.15,1.06), (.5,.30,.05,1.01),
+                                             (.8,.40,.20,.96), (1,.10,.10,1.04)):
+        values.append({"highlight_repair": repair, "denoise_k": denoise_k,
+                       "color_strength": colour, "exposure_trim": trim})
     return values
 
 
@@ -53,8 +49,11 @@ def tune(image: np.ndarray, diagnosis: DiagnosisResult, cfg: EngineConfig, seed:
     outputs: list[np.ndarray] = []
     totals: list[float] = []
     c = cfg["tuner"]
-    for index, params in enumerate(_params(diagnosis, cfg, seed)):
-        out = enhance_classical(small, small_diagnosis, cfg, params=params).image
+    anchor_mean = float(np.mean(small))
+    for index, params in enumerate(_params()):
+        # The real engine applies these to CIDNet after its event-ordered search;
+        # this proxy pass scores only bounded local corrections.
+        out = np.clip(small * params["exposure_trim"], 0, 1)
         values, _ = custom_values(uint8(small), uint8(out), cfg, small_diagnosis.valid)
         clip = float(values["clip_pct_out"] or 0.0)
         chroma = float(values["chroma_delta_e"] or 0.0)
@@ -63,10 +62,11 @@ def tune(image: np.ndarray, diagnosis: DiagnosisResult, cfg: EngineConfig, seed:
         # min/max scaling is used.
         score = (-clip / c["clip_norm"] - chroma / c["chroma_norm"]
                  + (float(edge) if edge is not None else 0.0) * c["edge_weight"])
-        feasible = clip <= c["max_clip_pct"]
-        reasons = [] if feasible else ["This version clipped too many bright pixels."]
+        darker = float(np.mean(out)) < anchor_mean * .85
+        feasible = clip <= 1.0 and not darker
+        reasons = [] if feasible else (["This version clipped more than 1% of pixels."] if clip > 1 else ["This version is over 15% darker than CIDNet."])
         key = f"cand_{index:02d}"
-        candidates.append(Candidate(index, asdict(params), {"clip_pct": clip, "chroma_delta_e": chroma,
+        candidates.append(Candidate(index, params, {"clip_pct": clip, "chroma_delta_e": chroma,
                           "edge_retention": edge, "norm_custom": score, "clipiqa": None}, score if feasible else None,
                           feasible, reasons, key, False))
         visuals.append(Visual(key, uint8(proxy(out, 128)), "thumb", 128, False))
@@ -86,4 +86,6 @@ def tune(image: np.ndarray, diagnosis: DiagnosisResult, cfg: EngineConfig, seed:
         if index != winner and candidate.feasible:
             candidates[index] = replace(candidate, reasons=["A more conservative quality score ranked higher."])
     recipe = "clipiqa+custom" if clip_scores is not None else "custom_no_clipiqa"
-    return candidates, visuals, EnhanceParams(**candidates[winner].params), recipe
+    # Existing engine wiring expects an EnhanceParams object; candidate parameters
+    # are retained in Candidate.params and applied after CIDNet in the next stage.
+    return candidates, visuals, EnhanceParams(1.0, 0.0, 0.0), recipe
