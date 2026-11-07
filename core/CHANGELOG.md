@@ -98,3 +98,10 @@ before starting v0.2.0.
 - MetricSuite provides paired SSIM/LPIPS and unpaired PyIQA metrics, rejects non-finite outputs, and reports current-call unavailable reasons. The optional iqa extra pins setuptools==80.9.0 for CLIP-IQA.
 - User-reported LOL-v1 eval15, three images: PSNR dl/hybrid 23.48/23.42, 21.56/21.56, 25.33/25.33 dB; SSIM delta 0.001; LPIPS equal or better for hybrid; clipped pixels 12.8/0.38%, 0.36/0.09%, and 0/0%.
 - User-confirmed full suite: 359 passed, 13 GPU tests deselected. All Step 5 targets passed.
+
+
+## 0.4.3 - 2026-11-07
+
+- Hybrid guardrails are audit-only by default: checks and warnings are still reported, while automatic repair is controlled by `real.guardrails.auto_repair` (default false).
+- The `no_guardrails` ablation now compares audit-only checks with no guardrail checks. User-reported 15-image ablation: audit-only scored PSNR 19.79, SSIM 0.816, LPIPS 0.196, clipped 0.26%; default repair scored PSNR 19.57, SSIM 0.721, LPIPS 0.247, clipped 0.09%.
+- User-confirmed full suite: 359 passed, 13 deselected.

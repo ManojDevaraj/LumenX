@@ -72,6 +72,8 @@ def test_direct_baseline_preserves_model_output(mode, monkeypatch):
 def test_repair_reuses_deep_once_and_runs_one_retry(monkeypatch):
     """The second guardrail attempt must not trigger a second model execution."""
     engine = create_engine(device="cpu")
+    engine._cfg = replace(engine._cfg, values={**engine._cfg.public(), "real": {
+        **engine._cfg.public()["real"], "guardrails": {**engine._cfg.public()["real"]["guardrails"], "auto_repair": True}}})
     calls = stub_model(engine, monkeypatch)
     audits = []
 
@@ -92,6 +94,8 @@ def test_repair_reuses_deep_once_and_runs_one_retry(monkeypatch):
 def test_unresolved_repair_returns_recorded_conservative_result(monkeypatch):
     """The fallback has independent checks; no third repair or model call happens."""
     engine = create_engine(device="cpu")
+    engine._cfg = replace(engine._cfg, values={**engine._cfg.public(), "real": {
+        **engine._cfg.public()["real"], "guardrails": {**engine._cfg.public()["real"]["guardrails"], "auto_repair": True}}})
     calls = stub_model(engine, monkeypatch)
     monkeypatch.setattr("lumenx_core.engine.audit", lambda *args: check_set(failed=True))
     req = make_request()
