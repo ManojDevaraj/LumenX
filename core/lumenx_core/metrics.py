@@ -49,7 +49,11 @@ def _iqa(name: str, images: list[np.ndarray], reference: list[np.ndarray] | None
         with torch.inference_mode():
             values = _IQA[name](batch) if reference is None else _IQA[name](batch, torch.from_numpy(
                 np.stack(reference)).permute(0, 3, 1, 2).float().div_(255))
-        return [float(value) for value in values.detach().cpu().reshape(-1)]
+        result = [float(value) for value in values.detach().cpu().reshape(-1)]
+        if not all(np.isfinite(result)):
+            _IQA_ERRORS[name] = f"{name.upper()} returned a non-finite value."
+            return None
+        return result
     except Exception as exc:
         _IQA_ERRORS[name] = f"{name.upper()} unavailable: {type(exc).__name__}."
         return None
