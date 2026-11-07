@@ -20,7 +20,6 @@ from .guardrails import audit
 from .fusion import fuse, repair_deep
 from .metrics import ClassicalMetricSuite, request_metrics
 from .recoverability import estimate_recoverability
-from .recoverability import enforce_gain
 from .render import colormap, diagnosis_visuals, final_visuals, recovery_visual, uint8
 from .report import classical_report, diagnosis_chips
 from .timing import timer
@@ -146,7 +145,7 @@ class RealEngine:
             with timer(timings, "render"):
                 overlay = recovery_visual(recovery, valid, self._cfg)
             event = self._stage("recoverability", "Locating weak recorded signal",
-                                "Estimated signal confidence controls how much brightening each area can receive.",
+                                "Estimated signal confidence controls texture smoothing in near-black flat areas.",
                                 "Input SNR, estimator support and joint near-black variance.", [overlay], overlay.key,
                                 recovery.summary, timings["recoverability"])
             story.append(StoryStep(event.title, event.caption, overlay.key))
@@ -400,8 +399,6 @@ class RealEngine:
                     output = image ** cfg["fusion"]["safe_gamma"]
                     if classical_image is not None:
                         output = np.minimum(output, classical_image)
-                    if recovery_enabled:
-                        output = enforce_gain(output, diagnosis.luminance, safer_recovery, cfg)
                     with timer(timings, "metrics"):
                         metrics = request_metrics(uint8(image), uint8(output), valid, cfg)
                     with timer(timings, "guardrails"):
@@ -424,7 +421,7 @@ class RealEngine:
                      "Used classical processing as explicitly requested."),
                     "Preserved the original processing dimensions and supplied transparency.",
                     ("Used configured fixed settings because tuning was explicitly disabled." if hybrid else "Preserved direct baseline output without hybrid postprocessing."),
-                    ("Applied input-confidence controls to hybrid processing." if hybrid and recovery_enabled and not no_fusion else "Preserved the explicitly requested baseline or confidence-control ablation."),
+                    ("Applied confidence-guided texture smoothing only in near-black flat areas." if hybrid and recovery_enabled and not no_fusion else "Preserved the explicitly requested baseline or confidence-control ablation."),
                     ("Attempted one conservative repair using cached model output." if repair_attempted else "Recorded quality checks without an automatic repair."),
                     "Left unavailable learned quality scores empty with reasons.",
                 ]

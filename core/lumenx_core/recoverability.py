@@ -35,7 +35,7 @@ def estimate_recoverability(diagnosis: DiagnosisResult, cfg: EngineConfig) -> Re
     counts = np.bincount(classes[diagnosis.valid], minlength=3) if valid_count else np.array([1, 0, 0])
     pcts = counts / max(1, int(np.sum(counts))) * 100
     weak = float(pcts[0])
-    sentence = f"About {weak:.1f}% had weak recorded light; brightening was limited there."
+    sentence = f"About {weak:.1f}% had weak recorded light; texture smoothing is strongest there."
     if not valid_count:
         sentence = "No visible pixels were supplied; the confidence overlay contains no visible evidence."
     summary = {

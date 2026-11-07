@@ -20,6 +20,12 @@
   variance after colour processing, keeping black input black without weakening
   the shape test. Full suite: 359 passed, 13 GPU tests deselected; Ruff clean.
 
+## core-v0.4.2 development — Step 3
+
+- Recoverability now adds denoise strength only on joint near-black, locally
+  flat pixels. It does not alter exposure or apply a gain cap, including in the
+  conservative guardrail path. Regression gate: 22 passed; Ruff clean.
+
 ## core-v0.4.2 development — metrics work in progress
 
 - MetricSuite now attempts SSIM/LPIPS (paired) and NIQE/BRISQUE/CLIP-IQA/MUSIQ

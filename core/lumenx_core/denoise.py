@@ -24,7 +24,11 @@ def denoise(image: np.ndarray, diagnosis: DiagnosisResult, recovery: RecoveryRes
         gain = y / np.maximum(diagnosis.luminance, epsilon)
         strength = c["k"] * gain * diagnosis.noise / c["sigma_reference"]
         if recovery_enabled:
-            strength += c["confidence_boost"] * (1 - recovery.soft)
+            near_black = diagnosis.luminance <= cfg["real"]["recoverability"]["black_luminance"]
+            local_mean = cv2.boxFilter(diagnosis.luminance, cv2.CV_32F, (3, 3))
+            variance = np.maximum(cv2.boxFilter(diagnosis.luminance ** 2, cv2.CV_32F, (3, 3)) - local_mean ** 2, 0)
+            texture_only = near_black & (variance <= cfg["real"]["recoverability"]["black_variance"])
+            strength += c["confidence_boost"] * (1 - recovery.soft) * texture_only
         strength = np.clip(strength, 0, 1)
         if uniform:
             strength.fill(c["uniform_strength"])
