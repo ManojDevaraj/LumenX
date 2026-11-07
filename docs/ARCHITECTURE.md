@@ -1,6 +1,6 @@
 # LumenX System Architecture
 
-Team **Blackbox** · Problem **P1: Robust Low-Light Image Restoration and Enhancement** · engine `core-v0.4.3`
+Team **Black Rock** · Problem **P1: Robust Low-Light Image Restoration and Enhancement** · engine `core-v0.4.3`
 
 LumenX has two parts joined by one frozen interface ([`CONTRACT.md`](../CONTRACT.md)):
 

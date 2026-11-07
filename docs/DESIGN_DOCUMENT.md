@@ -6,8 +6,8 @@ _Also available as PDF: [`Hackathon_Technical_Solution_Report_LumenX.pdf`](Hacka
 |---|---|
 | Problem ID | ProbID - P1 |
 | Problem Title | Robust Low-Light Image Restoration and Enhancement |
-| Team Name | Blackbox |
-| Team Members | Manoj D — 1RUA24CSE0242; Mohit D — 1RUA24CSE0280; Nikhil Shridhara — 1RUA24CSE0283 |
+| Team Name | Black Rock |
+| Team Members | Nikhil Sridhara — 1RUA24CSE0283; Manoj D — 1RUA24CSE0242; Mohit D — 1RUA24CSE0280 |
 | GitHub Repository | https://github.com/ManojDevaraj/LumenX — branch main, commit b096195 (engine tag core-v0.4.3) |
 | Live Demo / Deployment | Local FastAPI web app (uvicorn, RTX 2050 laptop); Video demo: [link to be added] |
 

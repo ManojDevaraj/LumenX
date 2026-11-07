@@ -2,7 +2,7 @@
 
 # Evaluation: P1 Robust Low-Light Image Restoration and Enhancement
 
-Team **Blackbox** · Manoj D (1RUA24CSE0242), Mohit D (1RUA24CSE0280), Nikhil Shridhara (1RUA24CSE0283)
+Team **Black Rock** · Nikhil Sridhara (1RUA24CSE0283), Manoj D (1RUA24CSE0242), Mohit D (1RUA24CSE0280)
 Repository: https://github.com/ManojDevaraj/LumenX · engine tag `core-v0.4.3` · results commit `b096195`
 
 ## Setup
