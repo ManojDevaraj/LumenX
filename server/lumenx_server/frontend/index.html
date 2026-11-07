@@ -3,86 +3,338 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#080d14">
-  <title>LumenX — Low-Light Restoration</title>
+  <meta name="theme-color" content="#060709">
+  <title>LumenX by Black Rock</title>
+  <link rel="stylesheet" href="/static/fonts.css">
   <link rel="stylesheet" href="/static/theme.css">
 </head>
 <body>
+  <div class="grain" aria-hidden="true"></div>
+  <div class="chart-tip" data-role="chart-tip" role="tooltip" hidden></div>
+  <div class="cursor" data-role="cursor" aria-hidden="true"><span class="cursor-ring"></span><span class="cursor-dot"></span></div>
+  <div class="aurora" aria-hidden="true"><span></span><span></span></div>
+
   <div class="app-shell" data-role="application">
     <header class="topbar" data-role="header">
-      <a class="brand" href="/" aria-label="LumenX home"><span class="brand-mark">LX</span><span>LUMEN<span class="brand-x">X</span></span></a>
-      <div class="topbar-center"><span class="eyebrow">COMPUTATIONAL PHOTOGRAPHY</span><span class="header-title">Low-light restoration</span></div>
-      <div class="health" data-role="health"><span class="status-dot"></span><span data-role="health-label">Connecting</span><span class="mock-badge" data-role="mock-badge" hidden>MOCK</span></div>
+      <a class="brand" href="/" aria-label="Black Rock home">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+          <defs><linearGradient id="facet" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe9c7"/><stop offset="1" stop-color="#b98a4e"/></linearGradient></defs>
+          <path d="M4 22.5 9.6 8.4 19.2 4.5 28 12.6 27 24.4 14.8 28Z" fill="#111317" stroke="rgba(244,215,168,.45)" stroke-width="1"/>
+          <path d="M9.6 8.4 19.2 4.5 28 12.6 16.8 15.2Z" fill="url(#facet)"/>
+          <path d="M16.8 15.2 28 12.6 27 24.4Z" fill="#2a2620"/>
+        </svg>
+        <span class="brand-word">Black Rock</span>
+      </a>
+      <nav class="main-nav" aria-label="Main sections" data-role="navigation">
+        <button class="nav-tab is-active" data-role="tab-enhance" data-tab="enhance">Enhance</button>
+        <button class="nav-tab" data-role="tab-benchmarks" data-tab="benchmarks">Results</button>
+        <button class="nav-tab" data-role="tab-live" data-tab="live">Live</button>
+        <button class="nav-tab" data-role="tab-about" data-tab="about">About</button>
+      </nav>
+      <div class="health" data-role="health"><span class="status-dot"></span><span data-role="health-label">Connecting</span><span class="mock-badge" data-role="mock-badge" hidden>MOCK ENGINE</span></div>
     </header>
 
-    <nav class="main-nav" aria-label="Main sections" data-role="navigation">
-      <button class="nav-tab is-active" data-role="tab-enhance" data-tab="enhance">Enhance</button>
-      <button class="nav-tab" data-role="tab-compare" data-tab="compare">Compare</button>
-      <button class="nav-tab" data-role="tab-live" data-tab="live">Live camera</button>
-      <button class="nav-tab" data-role="tab-benchmarks" data-tab="benchmarks">Benchmarks</button>
-    </nav>
-
     <main>
-      <section class="workspace tab-panel is-active" data-role="panel-enhance" data-panel="enhance">
-        <aside class="control-panel" data-role="controls">
-          <div class="section-heading"><span class="eyebrow">START WITH A FRAME</span><h1>Bring the night into view.</h1><p>Upload a dark image and watch each restoration step appear.</p></div>
-          <label class="dropzone" data-role="dropzone" for="image-file">
-            <input id="image-file" data-role="image-file" type="file" accept="image/png,image/jpeg,image/webp,image/tiff,image/bmp">
-            <span class="upload-icon">↑</span><strong>Drop an image here</strong><span>or <u>browse files</u></span><small>PNG, JPEG, WebP, TIFF or BMP · up to 32 MB</small>
-          </label>
-          <div class="selected-file" data-role="selected-file" hidden></div>
-          <div class="form-row"><label for="mode-select">Restoration path</label><select id="mode-select" data-role="mode-select"><option value="hybrid">Adaptive hybrid</option><option value="classical">Classical vision</option><option value="dl">Zero-DCE++ model</option></select></div>
-          <button class="primary-button" data-role="run-button" disabled><span>Restore image</span><span>→</span></button>
-          <div class="gallery-block"><div class="row-heading"><span class="eyebrow">TRY A SCENE</span><span class="muted" data-role="gallery-count">Loading</span></div><div class="gallery-grid" data-role="gallery-grid"></div></div>
-          <p class="panel-note">The signal map is an estimate from the input. LumenX reports where the captured signal is weak.</p>
-        </aside>
+      <section class="tab-panel enhance-panel is-active" data-role="panel-enhance" data-panel="enhance">
+        <section class="reveal-hero is-pending" data-role="hero">
+          <canvas class="rh-canvas" data-role="hero-canvas" aria-label="The landing photo as a 3D surface: move to light it, click to raise the whole scene"></canvas>
+          <div class="rh-media" aria-hidden="true">
+            <img class="rh-dark" data-role="hero-dark" alt="">
+            <img class="rh-lit" data-role="hero-lit" alt="">
+            <div class="rh-glow"></div>
+            <div class="rh-vignette"></div>
+          </div>
+          <div class="rh-copy">
+            <span class="eyebrow"><span class="eyebrow-line"></span>LumenX · adaptive low-light restoration</span>
+            <h1>See what the <em>dark</em> was hiding.</h1>
+            <p>Your cursor is the light. Wherever it falls, LumenX's restoration surfaces and the scene rises by the light it recovered.</p>
+          </div>
+          <div class="rh-hint mono" data-role="hero-hint"><span class="rh-dot"></span><span>Loading the scene…</span></div>
+          <div class="rh-meta mono" data-role="hero-meta"></div>
+          <a class="rh-cta" href="#console" data-role="hero-cta"><span>Restore your own night</span><span class="rh-arrow" aria-hidden="true">↓</span></a>
+        </section>
 
-        <section class="result-panel" data-role="result-panel">
-          <div class="empty-state" data-role="empty-state"><div class="empty-orbit"><span>✦</span></div><span class="eyebrow">READY WHEN YOU ARE</span><h2>A clearer view starts with one image.</h2><p>Your original stays untouched. Stage maps and quality checks will appear here.</p></div>
-          <div class="run-view" data-role="run-view" hidden>
-            <div class="run-header"><div><span class="eyebrow" data-role="run-mode">ADAPTIVE HYBRID</span><h2 data-role="headline">Restoration report</h2></div><button class="download-button" data-role="download-button" disabled>Download final ↓</button></div>
-            <div class="progress-strip" data-role="progress-list" aria-live="polite"></div>
-            <div class="image-card">
-              <div class="image-card-head"><div><span class="eyebrow">BEFORE / AFTER</span><span class="image-size" data-role="image-size"></span></div><div class="overlay-tools"><label for="overlay-select">View map</label><select data-role="overlay-select" id="overlay-select"><option value="none">No overlay</option><option value="recoverability_overlay">Signal estimate</option><option value="gain">Brightening gain</option><option value="fusion">Path balance</option><option value="noise">Noise estimate</option></select></div></div>
-              <div class="comparison" data-role="comparison">
-                <img class="comparison-after" data-role="after-image" alt="Restored image">
-                <img class="comparison-overlay" data-role="comparison-overlay" alt="Selected diagnostic overlay" hidden>
-                <div class="comparison-before" data-role="before-wrap"><img data-role="before-image" alt="Original image"><span class="image-tag tag-before">ORIGINAL</span></div>
-                <span class="image-tag tag-after">RESTORED</span><span class="compare-handle" data-role="compare-handle"></span>
+        <div class="marquee" aria-hidden="true">
+          <div class="marquee-track" data-role="marquee-track">
+            <span>Low-light restoration</span><em>from black to light</em><b>CIDNet</b><span>Retinex · CLAHE</span><em>per-pixel fusion</em><b>Signal-aware denoise</b>
+          </div>
+        </div>
+
+        <section class="story" data-role="story" hidden>
+          <div class="story-pin">
+            <div class="story-head">
+              <div>
+                <span class="eyebrow"><span class="eyebrow-line"></span>How LumenX sees</span>
+                <h2>From <em>black</em> to light, in <span data-role="story-count">eight</span> moves.</h2>
               </div>
-              <label class="compare-slider"><span>Original</span><input data-role="compare-slider" type="range" min="0" max="100" value="50" aria-label="Before and after split"><span>Restored</span></label>
+              <p class="mono" data-role="story-meta"></p>
             </div>
-            <div class="story-grid">
-              <article class="surface story-card"><div class="row-heading"><span class="eyebrow">THE RESTORATION</span><span class="count-pill" data-role="stage-count">0 stages</span></div><div class="stage-strip" data-role="stage-strip"></div></article>
-              <article class="surface diagnosis-card"><span class="eyebrow">INPUT READOUT</span><div class="chip-grid" data-role="diagnosis-chips"></div><ul class="decision-list" data-role="decisions"></ul></article>
-            </div>
-            <div class="detail-grid">
-              <article class="surface relight-card"><div class="row-heading"><div><span class="eyebrow">LIVE RELIGHT</span><h3>Shape the illumination</h3></div><span class="muted">Local preview</span></div><canvas data-role="relight-canvas" aria-label="Interactive relighting preview"></canvas><p class="canvas-message" data-role="relight-message">Relight preview loads with the final image.</p><div class="slider-row"><label for="gamma-slider">Gamma <output data-role="gamma-value">1.00</output></label><input data-role="gamma-slider" id="gamma-slider" type="range" min="0.4" max="2.5" step="0.01" value="1"></div><div class="slider-row"><label for="exposure-slider">Exposure <output data-role="exposure-value">1.00×</output></label><input data-role="exposure-slider" id="exposure-slider" type="range" min="0.25" max="4" step="0.01" value="1"></div></article>
-              <article class="surface metrics-card"><div class="row-heading"><div><span class="eyebrow">QUALITY CHECKS</span><h3>Measured change</h3></div><span class="muted" data-role="metrics-resolution"></span></div><div class="metrics-table" data-role="metrics-table"></div><div class="timing-list" data-role="timings"></div></article>
-            </div>
-            <article class="surface candidates-card" data-role="candidates-section"><div class="row-heading"><div><span class="eyebrow">IMAGE-AWARE SEARCH</span><h3>Settings considered</h3></div><span class="muted" data-role="search-time"></span></div><div class="candidate-grid" data-role="candidate-grid"></div></article>
-            <div class="warning-list" data-role="warnings"></div>
+            <div class="story-track" data-role="story-track"></div>
+            <div class="story-progress" aria-hidden="true"><i data-role="story-bar"></i></div>
           </div>
         </section>
-      </section>
 
-      <section class="tab-panel compare-panel" data-role="panel-compare" data-panel="compare" hidden>
-        <div class="page-heading"><span class="eyebrow">METHOD STUDY</span><h1>Compare three restoration paths.</h1><p>Use the selected upload to compare classical, Zero-DCE++, and the adaptive hybrid.</p><button class="secondary-button" data-role="compare-button" disabled>Run three-way comparison</button></div>
-        <div class="compare-method-grid" data-role="compare-results"></div>
+
+        <div class="console-heading" id="console" data-reveal>
+          <span class="eyebrow"><span class="eyebrow-line"></span>The console</span>
+          <h2>Bring your own <em>night</em>.</h2>
+        </div>
+
+        <div class="console" data-reveal>
+          <div class="stage-col">
+            <div class="ambient" aria-hidden="true"><img data-role="ambient-image" alt=""></div>
+            <div class="viewer" data-role="comparison" data-state="empty">
+              <img class="v-layer v-after" data-role="after-image" alt="Restored image">
+              <img class="v-layer v-overlay" data-role="comparison-overlay" alt="Selected diagnostic map" hidden>
+              <img class="v-layer v-before" data-role="before-image" alt="Original image">
+              <div class="v-scan" aria-hidden="true"></div>
+              <span class="v-tag v-tag-before">Original</span>
+              <span class="v-tag v-tag-after">LumenX</span>
+              <div class="v-handle" data-role="compare-handle" aria-hidden="true"><span></span></div>
+              <div class="v-caption" data-role="viewer-caption" aria-live="polite"></div>
+              <div class="v-modes" role="radiogroup" aria-label="Comparison style" data-role="view-modes">
+                <button type="button" role="radio" aria-checked="true" data-view="split" class="is-active">Split</button>
+                <button type="button" role="radio" aria-checked="false" data-view="flashlight">Flashlight</button>
+              </div>
+
+              <label class="dropzone" data-role="dropzone" for="image-file">
+                <input id="image-file" data-role="image-file" type="file" accept="image/png,image/jpeg,image/webp,image/tiff,image/bmp">
+                <span class="drop-orb" aria-hidden="true"><span></span></span>
+                <strong>Drop a night photo</strong>
+                <span>or <u>browse files</u></span>
+                <small>PNG · JPEG · WebP · TIFF · BMP · up to 32 MB</small>
+              </label>
+              <div class="empty-state" data-role="empty-state" hidden></div>
+            </div>
+
+            <ol class="pipeline" data-role="progress-list" aria-label="Restoration pipeline"></ol>
+            <input class="sr-only" data-role="compare-slider" type="range" min="0" max="100" value="50" aria-label="Before and after split">
+          </div>
+
+          <aside class="control-panel" data-role="controls">
+            <div class="control-block">
+              <span class="label">Input</span>
+              <div class="selected-file" data-role="selected-file" hidden></div>
+              <label class="file-button" for="image-file">Choose image</label>
+            </div>
+            <div class="control-block">
+              <span class="label">Restoration path</span>
+              <div class="segmented" role="radiogroup" aria-label="Restoration path" data-role="mode-select">
+                <button type="button" role="radio" aria-checked="true" data-mode="hybrid" class="is-active"><strong>Hybrid</strong><small>Adaptive fusion</small></button>
+                <button type="button" role="radio" aria-checked="false" data-mode="dl"><strong>Deep learning</strong><small>CIDNet</small></button>
+                <button type="button" role="radio" aria-checked="false" data-mode="classical"><strong>Classical</strong><small>Retinex + CLAHE</small></button>
+              </div>
+            </div>
+            <div class="notice" data-role="console-notice" role="status" aria-live="polite" hidden></div>
+            <button class="primary-button" data-role="run-button" disabled><span>Restore image</span><span class="btn-arrow" aria-hidden="true">→</span></button>
+            <button class="secondary-button" data-role="compare-button" disabled><span>Compare all three</span><span aria-hidden="true">⇆</span></button>
+            <div class="control-block">
+              <div class="row-heading"><span class="label">Try a scene</span><span class="muted mono" data-role="gallery-count">Loading</span></div>
+              <div class="gallery-grid" data-role="gallery-grid"></div>
+            </div>
+          </aside>
+        </div>
+
+        <section class="compare-section" data-role="compare-section" hidden>
+          <div class="block-head"><span class="index">⇆</span><div><h3>Three paths, one image</h3><p>The same photo through every restoration path. The best value in each row is highlighted.</p></div><span class="muted mono" data-role="compare-status"></span></div>
+          <div class="compare-method-grid" data-role="compare-results"></div>
+          <div class="compare-table-wrap"><table class="compare-table" data-role="compare-table"></table></div>
+        </section>
+
+        <div class="run-view" data-role="run-view" hidden>
+          <div class="run-header">
+            <div>
+              <span class="eyebrow"><span class="eyebrow-line"></span><span data-role="run-mode">Adaptive hybrid</span></span>
+              <h2 data-role="headline">Restoration report</h2>
+            </div>
+            <button class="download-button" data-role="download-button" disabled>Download full resolution <span aria-hidden="true">↓</span></button>
+          </div>
+
+          <div class="stat-row" data-role="stat-row"></div>
+
+          <section class="block" data-reveal>
+            <div class="block-head"><span class="index">01</span><div><h3>What LumenX found</h3><p>The engine's own reading of this photo, in plain English.</p></div></div>
+            <div class="report-grid">
+              <article class="surface">
+                <span class="label">Input readout</span>
+                <div class="chip-grid" data-role="diagnosis-chips"></div>
+              </article>
+              <article class="surface recover-card">
+                <span class="label">How much light was recoverable</span>
+                <p class="recover-sentence" data-role="recover-sentence"></p>
+                <div class="recover-bar" data-role="recover-bar"></div>
+                <div class="recover-legend" data-role="recover-legend"></div>
+              </article>
+              <article class="surface">
+                <span class="label">Decisions</span>
+                <ul class="decision-list" data-role="decisions"></ul>
+              </article>
+              <article class="surface">
+                <span class="label">Safety checks</span>
+                <div class="guard-grid" data-role="guardrails"></div>
+              </article>
+            </div>
+          </section>
+
+          <section class="block" data-reveal>
+            <div class="block-head"><span class="index">02</span><div><h3>Look through the lens</h3><p>Every map below was computed for this image. Tap one to lay it over the result.</p></div><span class="muted mono" data-role="image-size"></span></div>
+            <div class="lens-row" data-role="overlay-select"></div>
+            <div class="lens-legend" data-role="lens-legend"></div>
+          </section>
+
+          <section class="block" data-reveal>
+            <div class="block-head"><span class="index">03</span><div><h3>The restoration, step by step</h3><p>Tap a step to see the image at that moment.</p></div><span class="count-pill" data-role="stage-count">0 stages</span></div>
+            <div class="stage-strip" data-role="stage-strip"></div>
+          </section>
+
+          <section class="block" data-reveal>
+            <div class="block-head"><span class="index">04</span><div><h3>Performance on this image</h3><p>Measured before and after. Arrows show whether each change is an improvement.</p></div><span class="muted mono" data-role="metrics-resolution"></span></div>
+            <div class="perf-grid">
+              <article class="surface" data-role="metrics-card"><span class="label">Quality measurements</span><div class="metrics-table" data-role="metrics-table"></div></article>
+              <article class="surface"><div class="row-heading"><span class="label">Where the time went</span><span class="muted mono" data-role="timing-total"></span></div><div class="timing-stack" data-role="timing-stack"></div><div class="timing-list" data-role="timings"></div></article>
+            </div>
+          </section>
+
+          <section class="block" data-reveal>
+            <div class="relief-card">
+              <canvas data-role="relief-canvas" aria-label="3D relief of recovered light; drag to orbit"></canvas>
+              <div class="relief-copy">
+                <div class="block-head"><span class="index">05</span><div><h3>Light, in three dimensions</h3><p>The restored photo draped over the engine's illumination heightmap. Peaks are where the light survived; contours mark equal brightness.</p></div></div>
+              </div>
+              <span class="relief-hint mono">Drag to orbit</span>
+            </div>
+          </section>
+
+          <section class="block" data-reveal data-role="candidates-section">
+            <div class="block-head"><span class="index">06</span><div><h3>Adaptive search</h3><p>Every setting the engine tried for this photo, and why the others lost.</p></div><span class="muted mono" data-role="search-time"></span></div>
+            <div class="candidate-grid" data-role="candidate-grid"></div>
+          </section>
+
+          <section class="block duo" data-reveal>
+            <article class="surface ridge-card">
+              <div class="block-head"><span class="index">07</span><div><h3>Light, measured</h3><p>One line per row of the illumination map. Peaks are where light survived.</p></div></div>
+              <canvas data-role="ridge-canvas" aria-label="Illumination ridgeline plot"></canvas>
+            </article>
+            <article class="surface relight-card">
+              <div class="block-head"><span class="index">08</span><div><h3>Shape the light yourself</h3><p data-role="relight-message">Relight preview loads with the final image.</p></div></div>
+              <canvas data-role="relight-canvas" aria-label="Interactive relighting preview"></canvas>
+              <div class="slider-row"><label for="gamma-slider">Gamma <output data-role="gamma-value">1.00</output></label><input data-role="gamma-slider" id="gamma-slider" type="range" min="0.4" max="2.5" step="0.01" value="1"></div>
+              <div class="slider-row"><label for="exposure-slider">Exposure <output data-role="exposure-value">1.00×</output></label><input data-role="exposure-slider" id="exposure-slider" type="range" min="0.25" max="4" step="0.01" value="1"></div>
+            </article>
+          </section>
+
+          <section class="block notes-block" data-reveal>
+            <span class="label">Engine notes for this run</span>
+            <div class="warning-list" data-role="warnings"></div>
+          </section>
+        </div>
       </section>
 
       <section class="tab-panel live-panel" data-role="panel-live" data-panel="live" hidden>
-        <div class="page-heading"><span class="eyebrow">LOW-LATENCY MODE</span><h1>See the room as the camera sees it.</h1><p>Frames are enhanced independently. New frames replace stale ones when the processing lane is busy.</p><button class="secondary-button" data-role="camera-button">Start camera</button></div>
-        <div class="live-grid"><video data-role="camera-video" autoplay muted playsinline></video><img data-role="live-output" alt="Enhanced live frame"><div class="live-stats" data-role="live-stats">Camera is off</div></div>
+        <div class="page-heading">
+          <span class="eyebrow"><span class="eyebrow-line"></span>Low-latency mode</span>
+          <h1>The room, as the <em>camera</em> sees it.</h1>
+          <p>Frames are enhanced independently. When the lane is busy, new frames replace stale ones.</p>
+          <button class="primary-button inline" data-role="camera-button"><span>Start camera</span></button>
+        </div>
+        <div class="live-grid">
+          <figure><video data-role="camera-video" autoplay muted playsinline></video><figcaption>Camera</figcaption></figure>
+          <figure><img data-role="live-output" alt="Enhanced live frame"><figcaption>LumenX</figcaption></figure>
+        </div>
+        <div class="live-stats mono" data-role="live-stats">Camera is off</div>
       </section>
 
-      <section class="tab-panel benchmarks-panel" data-role="panel-benchmarks" data-panel="benchmarks" hidden>
-        <div class="page-heading"><span class="eyebrow">EVALUATION</span><h1>Quality across the hard cases.</h1><p>Tables and charts appear as resumable dataset evaluation runs complete.</p></div>
-        <div class="benchmark-content surface" data-role="benchmark-content"><span class="eyebrow">NO RUNS YET</span><p>Start the evaluation scripts from the server folder to populate benchmark results.</p></div>
+      <section class="tab-panel results-panel" data-role="panel-benchmarks" data-panel="benchmarks" hidden>
+        <div class="page-heading">
+          <span class="eyebrow"><span class="eyebrow-line"></span>Results &amp; performance</span>
+          <h1>Measured, not <em>claimed</em>.</h1>
+          <p>Every number on this page is read live from the evaluation results the engine produced. Nothing here is typed in by hand.</p>
+        </div>
+        <div class="benchmark-content surface" data-role="benchmark-content"><span class="label">Loading results</span><p>Reading the evaluation summary…</p></div>
+
+        <div class="results" data-role="results" hidden>
+          <div class="callouts" data-role="result-callouts"></div>
+
+          <section class="results-block">
+            <div class="block-head"><span class="index">01</span><div><h3>Head-to-head</h3><p data-role="headline-caption"></p></div></div>
+            <div class="table-wrap"><table class="results-table" data-role="headline-table"></table></div>
+            <p class="table-note">Arrows show which direction is better. The best value in each column is highlighted.</p>
+          </section>
+
+          <section class="results-block">
+            <div class="block-head"><span class="index">02</span><div><h3>What each part contributes</h3><p data-role="ablation-caption"></p></div></div>
+            <div class="ablation-charts" data-role="ablation-chart"></div>
+            <div class="ablation-notes" data-role="ablation-notes"></div>
+          </section>
+
+          <section class="results-block duo-results">
+            <article class="surface">
+              <div class="block-head"><span class="index">03</span><div><h3>Fine-tuning</h3><p>Was it worth retraining the curve model on our data?</p></div></div>
+              <div data-role="finetune-panel"></div>
+            </article>
+            <article class="surface">
+              <div class="block-head"><span class="index">04</span><div><h3>Known limitations</h3><p>Where LumenX still struggles, stated plainly.</p></div></div>
+              <ul class="limit-list" data-role="limitations"></ul>
+            </article>
+          </section>
+
+          <section class="results-block">
+            <div class="block-head"><span class="index">05</span><div><h3>Failure analysis</h3><p>Runs the engine's own safety audit flagged during evaluation.</p></div><span class="muted mono" data-role="failure-count"></span></div>
+            <div class="flag-summary" data-role="failure-summary"></div>
+            <div class="table-wrap"><table class="results-table is-compact is-failures" data-role="failure-table"></table></div>
+          </section>
+
+          <section class="results-block">
+            <div class="block-head"><span class="index">06</span><div><h3>All datasets</h3><p>Pick a dataset to see every evaluated configuration.</p></div></div>
+            <div class="dataset-picker" data-role="dataset-picker" role="tablist" aria-label="Datasets"></div>
+            <div class="table-wrap"><table class="results-table is-compact" data-role="dataset-table"></table></div>
+            <p class="table-note" data-role="results-notice"></p>
+          </section>
+        </div>
+      </section>
+
+      <section class="tab-panel about-panel" data-role="panel-about" data-panel="about" hidden>
+        <div class="page-heading">
+          <span class="eyebrow"><span class="eyebrow-line"></span>About the method</span>
+          <h1>How LumenX <em>sees</em> in the dark.</h1>
+          <p>LumenX first diagnoses a photo: where light is weak, how noisy it is, and how much real signal survived. It restores the scene with CIDNet, a deep model, then repairs blown highlights pixel by pixel, removes noise only where brightening amplified it, and audits the result with safety checks. Every step is shown, so the result can be inspected instead of trusted blindly.</p>
+        </div>
+
+        <div class="pipeline-diagram" aria-label="LumenX pipeline">
+          <div class="pd-node"><span class="pd-step mono">01</span><strong>Diagnose</strong><p>Measures light level, noise and how much signal was recorded.</p></div>
+          <div class="pd-node"><span class="pd-step mono">02</span><strong>CIDNet</strong><p>A deep model brightens the scene in a colour space built for low light.</p></div>
+          <div class="pd-node"><span class="pd-step mono">03</span><strong>Highlight repair</strong><p>Blends in a protected copy wherever lamps and windows would blow out.</p></div>
+          <div class="pd-node"><span class="pd-step mono">04</span><strong>Denoise</strong><p>Cleans grain only where the brightening amplified it.</p></div>
+          <div class="pd-node"><span class="pd-step mono">05</span><strong>Audit</strong><p>Checks highlights, colour shift, detail and halos, and reports every result.</p></div>
+        </div>
+
+        <div class="about-grid">
+          <article class="surface team-card">
+            <span class="label">Team</span>
+            <h3 class="team-name">Black Rock</h3>
+            <ol class="team-list">
+              <li>Nikhil Sridhara</li>
+              <li>Manoj D</li>
+              <li>Mohit D</li>
+            </ol>
+            <a class="sp-cta" href="https://github.com/ManojDevaraj/LumenX" target="_blank" rel="noopener">Source on GitHub →</a>
+          </article>
+          <article class="surface credits-card">
+            <span class="label">Credits &amp; licences</span>
+            <dl class="credits">
+              <dt>HVI-CIDNet</dt><dd>Architecture and weights by Fediory Feng et al., MIT licence.</dd>
+              <dt>Zero-DCE++</dt><dd>Li, Guo &amp; Loy, IEEE TPAMI 2021. CC BY-NC 4.0: non-commercial research use only.</dd>
+              <dt>LOL-v1</dt><dd>Low-light paired dataset, Wei et al., BMVC 2018. Used for evaluation only.</dd>
+              <dt>Demo photos</dt><dd>Abigail Keenan, Fons Heijnsbroek, Julien (domsson) and Julio Lopez on Unsplash (Unsplash Licence); LIME benchmark images via the Zero-DCE repository.</dd>
+              <dt>Type</dt><dd>Mona Sans and Geist Mono (SIL Open Font Licence); Boska (ITF Free Font Licence).</dd>
+            </dl>
+          </article>
+        </div>
       </section>
     </main>
-    <footer class="footer"><span>LUMENX · Adaptive low-light restoration</span><span>Input evidence guides the lift.</span></footer>
+    <footer class="footer"><span>Black Rock · Nikhil Sridhara, Manoj D, Mohit D</span><span>Input evidence guides the lift.</span></footer>
   </div>
+  <script src="/static/config.js"></script>
   <script type="module" src="/static/app.js"></script>
 </body>
 </html>

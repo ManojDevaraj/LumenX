@@ -25,4 +25,4 @@ where = ["."]
 include = ["lumenx_server*"]
 
 [tool.setuptools.package-data]
-lumenx_server = ["frontend/*"]
+lumenx_server = ["frontend/*", "frontend/fonts/*", "frontend/showcase/*"]
