@@ -1,4 +1,4 @@
-import { enhanceImage, getBenchmarks, getGallery, getHealth, streamEnhance } from './api.js';
+import { enhanceImage, getBenchmarks, getConfig, getGallery, getHealth, streamEnhance } from './api.js';
 import { createRelight } from './relight.js';
 import { createFlashlight } from './flashlight.js';
 import { createRelief } from './relief.js';
@@ -26,6 +26,7 @@ const state = {
   relief: null,
   viewerLight: null,
   heroFile: null,
+  maxUploadBytes: null,
   wipeFrame: null,
 };
 
@@ -34,15 +35,30 @@ const PIPELINE = [
   ['diagnose', 'Diagnose'], ['recoverability', 'Signal'], ['tuner', 'Search'], ['classical', 'Classical'],
   ['deep', 'Neural'], ['fusion', 'Fusion'], ['denoise', 'Denoise'], ['guardrails', 'Guard'],
 ];
+// Map legends follow the engine's renderer: viridis maps run purple (low) to yellow (high).
 const LENSES = [
-  ['recoverability_overlay', 'Signal confidence', 'where detail survived'],
-  ['illumination_gray', 'Illumination', 'measured light field'],
-  ['gain', 'Brightening gain', 'lift applied per pixel'],
-  ['fusion', 'Path balance', 'classical vs neural'],
-  ['noise', 'Noise estimate', 'grain in the input'],
-  ['snr', 'Signal to noise', 'per-pixel SNR'],
-  ['denoise_strength', 'Denoise strength', 'where grain was cleaned'],
+  ['recoverability_overlay', 'Recoverability', 'green · amber · red', 'Green: real detail was recorded. Amber: detail is estimated from weak signal. Red: too little light was recorded to recover.'],
+  ['illumination_gray', 'Illumination', 'measured light field', 'How much light reached each part of the sensor. Lighter means more scene light.'],
+  ['gain', 'Brightening gain', 'lift per pixel', 'How strongly each pixel was brightened. Purple is a gentle lift; yellow is the strongest.'],
+  ['fusion', 'Path balance', 'per-pixel mix', 'The per-pixel mix of the deep-learning result, the classical result and highlight protection.'],
+  ['denoise_strength', 'Denoise strength', 'grain cleaning', 'Where noise reduction was applied. Lighter means stronger smoothing.'],
+  ['noise', 'Noise estimate', 'grain in the input', 'Estimated sensor grain in the input. Purple is clean; yellow is the noisiest.'],
+  ['snr', 'Signal to noise', 'recording quality', 'Signal-to-noise per pixel. Yellow was recorded cleanly; purple is mostly noise.'],
 ];
+const RECOVERY_CLASSES = [
+  ['recovered_pct', 'Recovered', 'recorded detail', 'is-recovered'],
+  ['estimated_pct', 'Estimated', 'weak signal', 'is-estimated'],
+  ['unrecoverable_pct', 'Unrecoverable', 'too dark to recover', 'is-unrecoverable'],
+];
+const GUARD_LABELS = { overexposure: 'Blown highlights', color_shift: 'Colour shift', detail_loss: 'Detail kept', halo: 'Halo around lights' };
+// How each check reads its value against the threshold, per core/config/default.yaml.
+const GUARD_RULES = {
+  overexposure: 'Added clipping vs limit; flags only if total clipping is also over its limit.',
+  color_shift: 'Lower is better; flags above the limit.',
+  detail_loss: 'Edge detail kept; flags below the limit.',
+  halo: 'Lower is better; flags above the limit.',
+};
+const SUPPORTED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/tiff', 'image/bmp'];
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const STAGE_DWELL_MS = 700;
 const CANDIDATE_DWELL_MS = 90;
@@ -64,7 +80,9 @@ function setComparePosition(percent) {
 }
 
 function selectFile(file) {
-  if (!file || !file.type.startsWith('image/')) return showError('Choose a supported image file.');
+  if (!file) return;
+  if (!SUPPORTED_TYPES.includes(file.type)) return notify(`“${file.name}” isn't a supported image. Use PNG, JPEG, WebP, TIFF or BMP.`, 'error');
+  if (state.maxUploadBytes && file.size > state.maxUploadBytes) return notify(`“${file.name}” is ${formatBytes(file.size)}; the limit is ${formatBytes(state.maxUploadBytes)}.`, 'error');
   if (state.originalUrl) URL.revokeObjectURL(state.originalUrl);
   state.file = file;
   state.originalUrl = URL.createObjectURL(file);
@@ -429,12 +447,12 @@ async function runEnhancement() {
     });
   };
   try {
-    const result = await streamEnhance(state.file, state.mode, enqueue);
+    const result = await withRetry(() => streamEnhance(state.file, state.mode, enqueue));
     await playback;
     state.result = result;
     renderResult(result);
   } catch (error) {
-    showError(error.message);
+    notify(friendlyError(error), 'error');
     setViewerState('loaded');
   } finally {
     button.disabled = false;
@@ -526,6 +544,8 @@ function renderResult(result) {
   renderStats(result);
   renderLenses(result.maps || {});
   renderChips(result.diagnosis.chips || []);
+  renderRecoverability(result.recoverability);
+  renderGuardrails(result.guardrails || []);
   renderDecisions(result.decisions || []);
   renderMetrics(result.metrics || {});
   renderTimings(result.timings_ms || {});
@@ -630,6 +650,23 @@ function renderLenses(maps) {
     button.addEventListener('click', () => setOverlay(state.overlayKey === key ? 'none' : key));
     row.append(button);
   }
+  renderLensLegend('none');
+}
+
+function renderLensLegend(key) {
+  const legend = $('lens-legend');
+  const entry = LENSES.find(([name]) => name === key);
+  legend.replaceChildren();
+  if (!entry) {
+    legend.append(node('span', 'muted', 'Tap a map to overlay it on the result and read what it shows.'));
+    return;
+  }
+  legend.append(node('strong', '', entry[1]), node('span', '', entry[3]));
+  if (key === 'recoverability_overlay') {
+    const key_ = node('span', 'legend-key');
+    for (const [, label, , tone] of RECOVERY_CLASSES) key_.append(node('i', tone, label));
+    legend.append(key_);
+  }
 }
 
 function setOverlay(key) {
@@ -639,6 +676,7 @@ function setOverlay(key) {
   overlay.hidden = !url;
   if (url) overlay.src = url;
   $$('.lens').forEach((lens) => lens.classList.toggle('is-active', lens.dataset.lens === key));
+  if ($('lens-legend')) renderLensLegend(key);
 }
 
 function addStageCard(stage, index, isFinal = false) {
@@ -680,61 +718,114 @@ function renderDecisions(decisions) {
   for (const decision of decisions) list.append(node('li', '', decision));
 }
 
-// Only rows with a measured value are shown; unavailable scores are never filled in.
+function renderRecoverability(recovery) {
+  const sentence = $('recover-sentence');
+  const bar = $('recover-bar');
+  const legend = $('recover-legend');
+  bar.replaceChildren();
+  legend.replaceChildren();
+  if (!recovery) {
+    sentence.textContent = 'Recoverability was not estimated for this run.';
+    return;
+  }
+  sentence.textContent = recovery.sentence || '';
+  for (const [field, label, hint, tone] of RECOVERY_CLASSES) {
+    const value = Number(recovery[field]);
+    if (!Number.isFinite(value)) continue;
+    const segment = node('i', tone);
+    segment.style.width = `${Math.max(0, value)}%`;
+    segment.title = `${label}: ${value.toFixed(1)}%`;
+    bar.append(segment);
+    const item = node('div', `recover-item ${tone}`);
+    item.append(node('b', '', `${value.toFixed(1)}%`), node('span', '', label), node('small', '', hint));
+    legend.append(item);
+  }
+  if (recovery.estimator_confidence != null) {
+    legend.append(node('p', 'recover-note', `Estimator confidence ${Number(recovery.estimator_confidence).toFixed(2)}. These are estimates from the input, not a certificate of recovered detail.`));
+  }
+}
+
+function renderGuardrails(checks) {
+  const grid = $('guardrails');
+  grid.replaceChildren();
+  if (!checks.length) {
+    grid.append(node('p', 'muted', 'No safety checks were reported for this run.'));
+    return;
+  }
+  for (const check of checks) {
+    const passed = check.passed;
+    const chip = node('div', `guard-chip ${passed === true ? 'is-pass' : passed === false ? 'is-flag' : 'is-na'}`);
+    const top = node('div', 'guard-top');
+    top.append(node('span', '', GUARD_LABELS[check.check] || check.check.replaceAll('_', ' ')), node('b', '', passed === true ? 'PASS' : passed === false ? 'FLAG' : '—'));
+    const values = node('div', 'guard-values mono', `${check.value == null ? '–' : Number(check.value).toFixed(3)} / limit ${check.threshold == null ? '–' : Number(check.threshold).toFixed(2)}`);
+    chip.append(top, values);
+    if (GUARD_RULES[check.check]) chip.append(node('div', 'guard-rule', GUARD_RULES[check.check]));
+    if (check.reason) chip.title = check.reason;
+    grid.append(chip);
+  }
+}
+
+// Every row is shown; a missing value is "–" with the engine's own reason, never a substituted number.
 function renderMetrics(metrics) {
   const container = $('metrics-table');
   container.replaceChildren();
   const directions = metrics.directions || {};
-  const rows = [];
-  for (const name of ['niqe', 'clipiqa', 'brisque', 'musiq']) {
-    rows.push([name.toUpperCase(), metrics.before?.[name], metrics.after?.[name], directions[name]]);
-  }
-  rows.push(['Edge detail', null, metrics.edge_retention, 'higher']);
-  rows.push(['Noise σ', metrics.noise_sigma?.before, metrics.noise_sigma?.after, 'lower']);
-  rows.push(['Chroma shift', null, metrics.chroma_delta_e, 'lower']);
-  rows.push(['Clipped highlights', metrics.clip_pct?.before, metrics.clip_pct?.after, 'lower']);
-  const measured = rows.filter(([, before, after]) => before != null || after != null);
-  if (!measured.length) {
-    container.append(node('p', 'metrics-empty', 'Learned quality scores are not available in this build, so none are shown.'));
-  } else {
-    const head = node('div', 'metric-row is-head');
-    head.append(node('span', '', 'Metric'), node('span', '', 'Before'), node('span', '', 'After'), node('span'));
-    container.append(head);
-  }
-  for (const [label, before, after, direction] of measured) {
+  const unavailable = metrics.unavailable || {};
+  const head = node('div', 'metric-row is-head');
+  head.append(node('span', '', 'Measurement'), node('span', '', 'Before'), node('span', '', 'After'), node('span'));
+  container.append(head);
+  const rows = [
+    ['CLIP-IQA', 'clipiqa', metrics.before?.clipiqa, metrics.after?.clipiqa, directions.clipiqa || 'higher', 3],
+    ['MUSIQ', 'musiq', metrics.before?.musiq, metrics.after?.musiq, directions.musiq || 'higher', 2],
+    ['NIQE', 'niqe', metrics.before?.niqe, metrics.after?.niqe, directions.niqe || 'lower', 3],
+    ['Blown highlights %', 'clip_pct', metrics.clip_pct?.before, metrics.clip_pct?.after, 'lower', 2],
+    ['Noise σ', 'noise_sigma', metrics.noise_sigma?.before, metrics.noise_sigma?.after, 'lower', 4],
+    ['Edge retention', 'edge_retention', null, metrics.edge_retention, 'higher', 3],
+    ['Colour shift ΔE', 'chroma_delta_e', null, metrics.chroma_delta_e, 'lower', 2],
+  ];
+  for (const [label, key, before, after, direction, digits] of rows) {
     const row = node('div', 'metric-row');
-    row.append(node('span', '', label), node('span', '', valueText(before)), node('span', '', valueText(after)));
+    const reason = unavailable[key] || 'Not measured for this run.';
+    const cell = (value, onlyAfter) => {
+      const span = node('span', value == null ? 'is-missing' : '', value == null ? '–' : Number(value).toFixed(digits));
+      if (value == null) span.title = onlyAfter ? 'Measured on the result only.' : reason;
+      return span;
+    };
+    row.append(node('span', '', label), cell(before, key === 'edge_retention' || key === 'chroma_delta_e'), cell(after, false));
     const delta = compareValues(before, after, direction);
-    const arrow = node('span', `metric-delta ${delta.state === 'worse' ? 'is-worse' : ''}`, delta.arrow);
-    arrow.title = delta.label;
+    const arrow = node('span', `metric-delta ${delta.state === 'worse' ? 'is-worse' : ''} ${delta.state === 'na' ? 'is-unavailable' : ''}`.trim(), delta.arrow);
+    arrow.title = delta.state === 'na' ? 'No before/after pair to compare.' : `${delta.state === 'better' ? 'Improved' : delta.state === 'worse' ? 'Worse' : 'Unchanged'} (${direction === 'higher' ? 'higher' : 'lower'} is better)`;
     row.append(arrow);
     container.append(row);
   }
-  $('metrics-resolution').textContent = metrics.resolution ? `${metrics.resolution}px proxy` : '';
+  $('metrics-resolution').textContent = metrics.resolution ? `measured on a ${metrics.resolution}px proxy` : '';
 }
 
 function renderTimings(timings) {
   const container = $('timings');
+  const stack = $('timing-stack');
   container.replaceChildren();
+  stack.replaceChildren();
   const keys = ['diagnose', 'recoverability', 'tuner', 'search', 'classical', 'deep', 'fusion', 'denoise', 'guardrails', 'metrics'];
   const present = keys.filter((key) => timings[key] != null);
+  const sum = present.reduce((total, key) => total + Number(timings[key]), 0) || 1;
   const max = Math.max(1, ...present.map((key) => Number(timings[key])));
   present.forEach((key, index) => {
     const value = Number(timings[key]);
+    const segment = node('i', `seg-${index % 6}`);
+    segment.style.width = `${(value / sum) * 100}%`;
+    segment.title = `${key} · ${value.toFixed(0)} ms`;
+    stack.append(segment);
     const row = node('div', 'timing-row');
     const bar = node('span', 'bar');
-    const fill = node('i');
+    const fill = node('i', `seg-${index % 6}`);
     fill.style.width = `${Math.max(2, (value / max) * 100)}%`;
     fill.style.animationDelay = `${index * 60}ms`;
     bar.append(fill);
     row.append(node('span', '', key), bar, node('b', '', `${value.toFixed(0)} ms`));
     container.append(row);
   });
-  if (timings.total != null) {
-    const row = node('div', 'timing-row is-total');
-    row.append(node('span', '', 'total'), node('span'), node('b', '', `${Number(timings.total).toFixed(0)} ms`));
-    container.append(row);
-  }
+  $('timing-total').textContent = timings.total != null ? `${Number(timings.total).toFixed(0)} ms total` : '';
 }
 
 function renderCandidates(candidates) {
@@ -745,20 +836,22 @@ function renderCandidates(candidates) {
 
 function renderCandidate(candidate, imageUrl) {
   if (!candidate) return;
-  const card = node('article', `candidate-card ${candidate.chosen ? 'is-winner' : ''}`);
+  const card = node('article', `candidate-card ${candidate.chosen ? 'is-winner' : ''} ${candidate.feasible === false ? 'is-infeasible' : ''}`.trim());
   if (imageUrl) {
     const img = node('img');
     img.src = imageUrl;
     img.alt = `Candidate ${candidate.id + 1} preview`;
+    img.loading = 'lazy';
     card.append(img);
   }
   const info = node('div', 'candidate-info');
   const title = node('div', 'candidate-title');
   title.append(node('span', '', `#${String(candidate.id + 1).padStart(2, '0')}`));
-  title.append(node('span', 'winner-tag', candidate.chosen ? 'SELECTED' : (candidate.feasible ? '' : 'REVIEW')));
+  title.append(node('span', 'winner-tag', candidate.chosen ? 'CHOSEN' : (candidate.feasible === false ? 'REJECTED' : '')));
   info.append(title);
-  info.append(node('p', '', `score ${candidate.total == null ? '—' : Number(candidate.total).toFixed(3)}`));
-  card.title = candidate.reasons?.[0] || '';
+  info.append(node('p', 'candidate-score', `score ${candidate.total == null ? '–' : Number(candidate.total).toFixed(3)}`));
+  const reason = candidate.chosen ? 'Best score among the feasible settings.' : (candidate.reasons || []).join(' ');
+  if (reason) info.append(node('p', 'candidate-reason', reason));
   card.append(info);
   $('candidate-grid').append(card);
 }
@@ -914,13 +1007,28 @@ async function loadHealth() {
   }
 }
 
+const COMPARE_MODES = ['hybrid', 'dl', 'classical'];
+const COMPARE_ROWS = [
+  ['Blown highlights %', (r) => r.metrics?.clip_pct?.after, 'lower', 2],
+  ['Colour shift ΔE', (r) => r.metrics?.chroma_delta_e, 'lower', 2],
+  ['Edge retention', (r) => r.metrics?.edge_retention, 'higher', 3],
+  ['Noise σ (after)', (r) => r.metrics?.noise_sigma?.after, 'lower', 4],
+  ['CLIP-IQA', (r) => r.metrics?.after?.clipiqa, 'higher', 3],
+  ['MUSIQ', (r) => r.metrics?.after?.musiq, 'higher', 2],
+  ['Latency ms', (r) => r.timings_ms?.total, 'lower', 0],
+];
+
 async function runComparison() {
   if (!state.file) return;
   const button = $('compare-button');
+  const section = $('compare-section');
   const container = $('compare-results');
   button.disabled = true;
   button.firstElementChild.textContent = 'Comparing…';
+  section.hidden = false;
   container.replaceChildren();
+  $('compare-table').replaceChildren();
+  section.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'start' });
   const original = node('article', 'method-card is-original');
   const originalImage = node('img');
   originalImage.src = state.originalUrl;
@@ -929,37 +1037,71 @@ async function runComparison() {
   originalBody.append(node('span', 'method-kicker', 'Input'), node('h3', '', 'Original'), node('p', '', 'The photo as captured.'));
   original.append(originalImage, originalBody);
   container.append(original);
-  const cards = ['classical', 'dl', 'hybrid'].map((mode, index) => {
+  const cards = COMPARE_MODES.map((mode, index) => {
     const card = node('article', 'method-card');
     card.style.animationDelay = `${(index + 1) * 90}ms`;
     const body = node('div');
-    body.append(node('span', 'method-kicker', modeKicker(mode)), node('h3', '', modeLabel(mode)), node('p', '', 'Processing…'));
+    body.append(node('span', 'method-kicker', modeKicker(mode)), node('h3', '', modeLabel(mode)), node('p', '', 'Waiting…'));
     card.append(node('div', 'method-ph'), body);
     container.append(card);
-    return [mode, card, body];
+    return { mode, card, body, result: null };
   });
-  for (const [mode, card, body] of cards) {
+  for (const [index, entry] of cards.entries()) {
+    $('compare-status').textContent = `running ${index + 1} of ${cards.length}`;
+    entry.body.lastElementChild.textContent = 'Processing…';
     try {
-      const result = await enhanceImage(state.file, mode);
+      const result = await withRetry(() => enhanceImage(state.file, entry.mode));
+      entry.result = result;
       const image = node('img');
       image.src = result.final.preview_url;
-      image.alt = `${modeLabel(mode)} output`;
-      card.firstElementChild.replaceWith(image);
-      body.replaceChildren(node('span', 'method-kicker', modeKicker(mode)), node('h3', '', modeLabel(mode)), node('p', '', result.headline));
+      image.alt = `${modeLabel(entry.mode)} output`;
+      entry.card.firstElementChild.replaceWith(image);
+      entry.body.replaceChildren(node('span', 'method-kicker', modeKicker(entry.mode)), node('h3', '', modeLabel(entry.mode)), node('p', '', result.headline));
       if (result.provenance.actual_method === 'classical_fallback') {
-        body.append(node('p', 'warning-item', 'Learned weights were unavailable; this result used the disclosed classical fallback.'));
+        entry.body.append(node('p', 'warning-item', 'Learned weights were unavailable; this result used the disclosed classical fallback.'));
       }
-      const score = result.metrics?.after?.niqe;
-      const parts = [`${Number(result.timings_ms?.total || 0).toFixed(0)} ms`];
-      if (score != null) parts.unshift(`NIQE ${valueText(score)}`);
-      body.append(node('span', 'method-time', parts.join(' · ')));
+      const open = node('button', 'method-open', 'Open full report →');
+      open.type = 'button';
+      open.addEventListener('click', () => {
+        renderResult(result);
+        $('comparison').scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'center' });
+      });
+      entry.body.append(node('span', 'method-time', `${Number(result.timings_ms?.total || 0).toFixed(0)} ms`), open);
     } catch (error) {
-      card.firstElementChild.remove();
-      body.replaceChildren(node('h3', '', modeLabel(mode)), node('p', 'warning-item', error.message));
+      entry.card.firstElementChild.remove();
+      entry.body.replaceChildren(node('h3', '', modeLabel(entry.mode)), node('p', 'warning-item', friendlyError(error)));
     }
+    renderCompareTable(cards);
   }
+  $('compare-status').textContent = '';
   button.disabled = false;
-  button.firstElementChild.textContent = 'Run three-way comparison';
+  button.firstElementChild.textContent = 'Compare all three';
+}
+
+// Highlights the best value per row among modes that reported it; missing values stay "–".
+function renderCompareTable(cards) {
+  const table = $('compare-table');
+  table.replaceChildren();
+  const head = node('tr');
+  head.append(node('th', '', 'Measured on this image'));
+  cards.forEach(({ mode }) => head.append(node('th', '', modeLabel(mode))));
+  table.append(head);
+  for (const [label, pick, direction, digits] of COMPARE_ROWS) {
+    const values = cards.map(({ result }) => {
+      const value = result ? pick(result) : null;
+      return value == null || !Number.isFinite(Number(value)) ? null : Number(value);
+    });
+    const present = values.filter((value) => value != null);
+    const best = present.length > 1 ? (direction === 'higher' ? Math.max(...present) : Math.min(...present)) : null;
+    const row = node('tr');
+    row.append(node('th', '', `${label} ${direction === 'higher' ? '↑' : '↓'}`));
+    values.forEach((value, index) => {
+      const cell = node('td', value != null && value === best ? 'is-best' : '', value == null ? '–' : value.toFixed(digits));
+      if (value == null && cards[index].result) cell.title = 'Not measured for this run.';
+      row.append(cell);
+    });
+    table.append(row);
+  }
 }
 
 async function loadBenchmarks() {
@@ -1063,17 +1205,43 @@ function addWarning(message) {
   $('warnings').append(warning);
 }
 
-function showError(message) {
-  clearError();
-  const element = node('div', 'warning-item', message);
-  element.dataset.role = 'error-message';
-  document.querySelector('main').prepend(element);
+function notify(message, tone = 'info') {
+  const notice = $('console-notice');
+  notice.className = `notice is-${tone}`;
+  notice.textContent = message;
+  notice.hidden = false;
 }
 
-function clearError() { document.querySelector('[data-role="error-message"]')?.remove(); }
-function modeLabel(mode) { return ({ hybrid: 'Adaptive hybrid', classical: 'Classical vision', dl: 'Zero-DCE++ model' })[mode] || mode; }
-function methodLabel(method) { return ({ zerodce: 'Zero-DCE++ neural model', hybrid: 'Adaptive hybrid', classical: 'Classical vision', classical_fallback: 'Classical fallback' })[method] || method; }
-function modeKicker(mode) { return ({ hybrid: 'Per-pixel fusion', classical: 'Retinex + CLAHE', dl: 'Neural curve estimation' })[mode] || ''; }
+function showError(message) { notify(message, 'error'); }
+function clearError() { const notice = $('console-notice'); if (notice) notice.hidden = true; }
+
+// Plain-language messages for the API's documented error codes (413/415/422/503).
+function friendlyError(error) {
+  const limit = state.maxUploadBytes ? formatBytes(state.maxUploadBytes) : 'the upload limit';
+  if (error.status === 413) return `That image is too large. Keep files under ${limit} and within the server's pixel limit.`;
+  if (error.status === 415) return 'That file type is not supported. Use PNG, JPEG, WebP, TIFF or BMP.';
+  if (error.status === 422) return error.code === 'decode_failed' ? 'The image could not be read. It may be damaged or only partly downloaded.' : `The request was rejected: ${error.message}`;
+  if (error.status === 503) return error.code === 'queue_full' ? 'The engine is still busy. Please try again in a moment.' : 'The engine is not available right now.';
+  if (error instanceof TypeError) return 'Could not reach the LumenX server. Check that it is running.';
+  return error.message || 'Something went wrong.';
+}
+
+// Retries only the "queue full" case, honouring the server's Retry-After header.
+async function withRetry(task, attempts = 3) {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await task();
+    } catch (error) {
+      if (!(error.status === 503 && error.code === 'queue_full') || attempt >= attempts) throw error;
+      const wait = Math.max(1, error.retryAfter || 2);
+      notify(`The engine is busy. Retrying in ${wait} s (attempt ${attempt + 1} of ${attempts})…`, 'info');
+      await sleep(wait * 1000);
+    }
+  }
+}
+function modeLabel(mode) { return ({ hybrid: 'Adaptive hybrid', classical: 'Classical vision', dl: 'Deep learning (CIDNet)' })[mode] || mode; }
+function methodLabel(method) { return ({ cidnet: 'Deep learning (CIDNet)', zerodce: 'Zero-DCE++', hybrid: 'Adaptive hybrid', classical: 'Classical vision', classical_fallback: 'Classical fallback' })[method] || method; }
+function modeKicker(mode) { return ({ hybrid: 'CIDNet + highlight repair', classical: 'Retinex + CLAHE', dl: 'CIDNet' })[mode] || ''; }
 function extensionFor(type) { return ({ 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/tiff': 'tiff', 'image/bmp': 'bmp' })[type] || 'png'; }
 function formatBytes(size) { return size < 1024 * 1024 ? `${(size / 1024).toFixed(0)} KB` : `${(size / 1024 / 1024).toFixed(1)} MB`; }
 function valueText(value) {
@@ -1102,6 +1270,7 @@ async function boot() {
   setupCursor();
   $$('.rh-copy h1, .page-heading h1').forEach(splitHeadline);
   resetPipeline();
+  getConfig().then((config) => { state.maxUploadBytes = Number(config.server?.max_upload_bytes) || null; }).catch(() => {});
   const [items] = await Promise.all([loadGallery(), loadHealth()]);
   setInterval(loadHealth, 15000);
   setupMarquee(items);

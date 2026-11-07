@@ -26,7 +26,6 @@
       </a>
       <nav class="main-nav" aria-label="Main sections" data-role="navigation">
         <button class="nav-tab is-active" data-role="tab-enhance" data-tab="enhance">Enhance</button>
-        <button class="nav-tab" data-role="tab-compare" data-tab="compare">Compare</button>
         <button class="nav-tab" data-role="tab-live" data-tab="live">Live</button>
         <button class="nav-tab" data-role="tab-benchmarks" data-tab="benchmarks">Benchmarks</button>
       </nav>
@@ -55,7 +54,7 @@
 
         <div class="marquee" aria-hidden="true">
           <div class="marquee-track" data-role="marquee-track">
-            <span>Low-light restoration</span><em>from black to light</em><b>Zero-DCE++</b><span>Retinex · CLAHE</span><em>per-pixel fusion</em><b>Signal-aware denoise</b>
+            <span>Low-light restoration</span><em>from black to light</em><b>CIDNet</b><span>Retinex · CLAHE</span><em>per-pixel fusion</em><b>Signal-aware denoise</b>
           </div>
         </div>
 
@@ -120,17 +119,25 @@
               <span class="label">Restoration path</span>
               <div class="segmented" role="radiogroup" aria-label="Restoration path" data-role="mode-select">
                 <button type="button" role="radio" aria-checked="true" data-mode="hybrid" class="is-active"><strong>Hybrid</strong><small>Adaptive fusion</small></button>
+                <button type="button" role="radio" aria-checked="false" data-mode="dl"><strong>Deep learning</strong><small>CIDNet</small></button>
                 <button type="button" role="radio" aria-checked="false" data-mode="classical"><strong>Classical</strong><small>Retinex + CLAHE</small></button>
-                <button type="button" role="radio" aria-checked="false" data-mode="dl"><strong>Neural</strong><small>Zero-DCE++</small></button>
               </div>
             </div>
+            <div class="notice" data-role="console-notice" role="status" aria-live="polite" hidden></div>
             <button class="primary-button" data-role="run-button" disabled><span>Restore image</span><span class="btn-arrow" aria-hidden="true">→</span></button>
+            <button class="secondary-button" data-role="compare-button" disabled><span>Compare all three</span><span aria-hidden="true">⇆</span></button>
             <div class="control-block">
               <div class="row-heading"><span class="label">Try a scene</span><span class="muted mono" data-role="gallery-count">Loading</span></div>
               <div class="gallery-grid" data-role="gallery-grid"></div>
             </div>
           </aside>
         </div>
+
+        <section class="compare-section" data-role="compare-section" hidden>
+          <div class="block-head"><span class="index">⇆</span><div><h3>Three paths, one image</h3><p>The same photo through every restoration path. The best value in each row is highlighted.</p></div><span class="muted mono" data-role="compare-status"></span></div>
+          <div class="compare-method-grid" data-role="compare-results"></div>
+          <div class="compare-table-wrap"><table class="compare-table" data-role="compare-table"></table></div>
+        </section>
 
         <div class="run-view" data-role="run-view" hidden>
           <div class="run-header">
@@ -144,61 +151,81 @@
           <div class="stat-row" data-role="stat-row"></div>
 
           <section class="block" data-reveal>
-            <div class="block-head"><span class="index">01</span><div><h3>Look through the lens</h3><p>Every map below was computed for this image. Tap one to lay it over the result.</p></div><span class="muted mono" data-role="image-size"></span></div>
-            <div class="lens-row" data-role="overlay-select"></div>
+            <div class="block-head"><span class="index">01</span><div><h3>What LumenX found</h3><p>The engine's own reading of this photo, in plain English.</p></div></div>
+            <div class="report-grid">
+              <article class="surface">
+                <span class="label">Input readout</span>
+                <div class="chip-grid" data-role="diagnosis-chips"></div>
+              </article>
+              <article class="surface recover-card">
+                <span class="label">How much light was recoverable</span>
+                <p class="recover-sentence" data-role="recover-sentence"></p>
+                <div class="recover-bar" data-role="recover-bar"></div>
+                <div class="recover-legend" data-role="recover-legend"></div>
+              </article>
+              <article class="surface">
+                <span class="label">Decisions</span>
+                <ul class="decision-list" data-role="decisions"></ul>
+              </article>
+              <article class="surface">
+                <span class="label">Safety checks</span>
+                <div class="guard-grid" data-role="guardrails"></div>
+              </article>
+            </div>
           </section>
 
           <section class="block" data-reveal>
-            <div class="block-head"><span class="index">02</span><div><h3>The restoration, step by step</h3><p>Tap a step to see the image at that moment.</p></div><span class="count-pill" data-role="stage-count">0 stages</span></div>
+            <div class="block-head"><span class="index">02</span><div><h3>Look through the lens</h3><p>Every map below was computed for this image. Tap one to lay it over the result.</p></div><span class="muted mono" data-role="image-size"></span></div>
+            <div class="lens-row" data-role="overlay-select"></div>
+            <div class="lens-legend" data-role="lens-legend"></div>
+          </section>
+
+          <section class="block" data-reveal>
+            <div class="block-head"><span class="index">03</span><div><h3>The restoration, step by step</h3><p>Tap a step to see the image at that moment.</p></div><span class="count-pill" data-role="stage-count">0 stages</span></div>
             <div class="stage-strip" data-role="stage-strip"></div>
+          </section>
+
+          <section class="block" data-reveal>
+            <div class="block-head"><span class="index">04</span><div><h3>Performance on this image</h3><p>Measured before and after. Arrows show whether each change is an improvement.</p></div><span class="muted mono" data-role="metrics-resolution"></span></div>
+            <div class="perf-grid">
+              <article class="surface" data-role="metrics-card"><span class="label">Quality measurements</span><div class="metrics-table" data-role="metrics-table"></div></article>
+              <article class="surface"><div class="row-heading"><span class="label">Where the time went</span><span class="muted mono" data-role="timing-total"></span></div><div class="timing-stack" data-role="timing-stack"></div><div class="timing-list" data-role="timings"></div></article>
+            </div>
           </section>
 
           <section class="block" data-reveal>
             <div class="relief-card">
               <canvas data-role="relief-canvas" aria-label="3D relief of recovered light; drag to orbit"></canvas>
               <div class="relief-copy">
-                <div class="block-head"><span class="index">03</span><div><h3>Light, in three dimensions</h3><p>The restored photo draped over the engine's illumination heightmap. Peaks are where the light survived; contours mark equal brightness.</p></div></div>
+                <div class="block-head"><span class="index">05</span><div><h3>Light, in three dimensions</h3><p>The restored photo draped over the engine's illumination heightmap. Peaks are where the light survived; contours mark equal brightness.</p></div></div>
               </div>
               <span class="relief-hint mono">Drag to orbit</span>
             </div>
           </section>
 
+          <section class="block" data-reveal data-role="candidates-section">
+            <div class="block-head"><span class="index">06</span><div><h3>Adaptive search</h3><p>Every setting the engine tried for this photo, and why the others lost.</p></div><span class="muted mono" data-role="search-time"></span></div>
+            <div class="candidate-grid" data-role="candidate-grid"></div>
+          </section>
+
           <section class="block duo" data-reveal>
             <article class="surface ridge-card">
-              <div class="block-head"><span class="index">04</span><div><h3>Light, measured</h3><p>One line per row of the illumination map. Peaks are where light survived.</p></div></div>
+              <div class="block-head"><span class="index">07</span><div><h3>Light, measured</h3><p>One line per row of the illumination map. Peaks are where light survived.</p></div></div>
               <canvas data-role="ridge-canvas" aria-label="Illumination ridgeline plot"></canvas>
             </article>
             <article class="surface relight-card">
-              <div class="block-head"><span class="index">05</span><div><h3>Shape the light yourself</h3><p data-role="relight-message">Relight preview loads with the final image.</p></div></div>
+              <div class="block-head"><span class="index">08</span><div><h3>Shape the light yourself</h3><p data-role="relight-message">Relight preview loads with the final image.</p></div></div>
               <canvas data-role="relight-canvas" aria-label="Interactive relighting preview"></canvas>
               <div class="slider-row"><label for="gamma-slider">Gamma <output data-role="gamma-value">1.00</output></label><input data-role="gamma-slider" id="gamma-slider" type="range" min="0.4" max="2.5" step="0.01" value="1"></div>
               <div class="slider-row"><label for="exposure-slider">Exposure <output data-role="exposure-value">1.00×</output></label><input data-role="exposure-slider" id="exposure-slider" type="range" min="0.25" max="4" step="0.01" value="1"></div>
             </article>
           </section>
 
-          <details class="hood" data-reveal>
-            <summary><span class="index">06</span><span><strong>Under the hood</strong><small>Diagnosis, quality checks, timings and every setting the search considered</small></span><span class="hood-chevron" aria-hidden="true">+</span></summary>
-            <div class="hood-body">
-              <div class="hood-grid">
-                <article class="surface"><span class="label">Input readout</span><div class="chip-grid" data-role="diagnosis-chips"></div><ul class="decision-list" data-role="decisions"></ul></article>
-                <article class="surface"><div class="row-heading"><span class="label">Stage timings</span><span class="muted mono" data-role="metrics-resolution"></span></div><div class="timing-list" data-role="timings"></div></article>
-                <article class="surface" data-role="metrics-card"><span class="label">Quality checks</span><div class="metrics-table" data-role="metrics-table"></div></article>
-              </div>
-              <article class="surface candidates-card" data-role="candidates-section"><div class="row-heading"><span class="label">Image-aware search · settings considered</span><span class="muted mono" data-role="search-time"></span></div><div class="candidate-grid" data-role="candidate-grid"></div></article>
-              <div class="warning-list" data-role="warnings"></div>
-            </div>
-          </details>
+          <section class="block notes-block" data-reveal>
+            <span class="label">Engine notes for this run</span>
+            <div class="warning-list" data-role="warnings"></div>
+          </section>
         </div>
-      </section>
-
-      <section class="tab-panel compare-panel" data-role="panel-compare" data-panel="compare" hidden>
-        <div class="page-heading">
-          <span class="eyebrow"><span class="eyebrow-line"></span>Method study</span>
-          <h1>Three paths. <em>One</em> night.</h1>
-          <p>Run the selected image through classical vision, the neural model and the adaptive hybrid, side by side.</p>
-          <button class="primary-button inline" data-role="compare-button" disabled><span>Run three-way comparison</span><span class="btn-arrow" aria-hidden="true">→</span></button>
-        </div>
-        <div class="compare-method-grid" data-role="compare-results"></div>
       </section>
 
       <section class="tab-panel live-panel" data-role="panel-live" data-panel="live" hidden>

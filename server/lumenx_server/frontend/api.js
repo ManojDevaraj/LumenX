@@ -45,6 +45,7 @@ export async function enhanceImage(file, mode) {
 }
 
 export async function getHealth() { return checkedJson('/health'); }
+export async function getConfig() { return checkedJson('/config'); }
 export async function getGallery() { return checkedJson('/gallery'); }
 export async function getBenchmarks() { return checkedJson('/benchmarks'); }
 
@@ -58,7 +59,11 @@ async function responseError(response) {
   let payload;
   try { payload = await response.json(); } catch { payload = { message: response.statusText }; }
   const detail = payload.detail || payload;
-  return new Error(detail.message || detail.code || `Request failed (${response.status}).`);
+  const error = new Error(detail.message || detail.code || `Request failed (${response.status}).`);
+  error.status = response.status;
+  error.code = detail.code || null;
+  error.retryAfter = Number(response.headers.get('Retry-After')) || null;
+  return error;
 }
 
 function parseEventBlock(block) {
