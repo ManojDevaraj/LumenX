@@ -234,3 +234,19 @@ authorized by the user's current instruction. Work stops here for review.
 ## Review boundary
 
 Stop at the first v0.1.0 tag. No v0.2.0 implementation before user review.
+
+
+## core-v0.4.2 - release
+
+- CIDNet-anchored hybrid with local guided highlight repair; output outside repair masks remains CIDNet. Denoise corrections are local, and recoverability smooths near-black flat texture without limiting exposure.
+- Twelve bounded tuner candidates with candidate 0 as the least-correction tie-break. PyIQA metrics emit finite scores or current-call unavailable reasons. The optional IQA extra pins setuptools==80.9.0 for CLIP-IQA.
+- User-reported LOL-v1 eval15 results for three images:
+
+  | Image | PSNR dl/hybrid | SSIM delta | LPIPS hybrid | Clipped dl/hybrid |
+  |---|---:|---:|---|---:|
+  | 1 | 23.48 / 23.42 dB | 0.001 | equal or better | 12.8% / 0.38% |
+  | 2 | 21.56 / 21.56 dB | 0.001 | equal or better | 0.36% / 0.09% |
+  | 3 | 25.33 / 25.33 dB | 0.001 | equal or better | 0% / 0% |
+
+- User-confirmed full suite: 359 passed, 13 GPU tests deselected. Step 5 targets passed.
+- Local release tag: core-v0.4.2.
