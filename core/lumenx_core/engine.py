@@ -233,7 +233,7 @@ class RealEngine:
         hybrid = req.mode == "hybrid"
         recovery_enabled = "no_recoverability" not in req.ablate
         no_fusion = "no_fusion" in req.ablate
-        audit_only = not hybrid or no_fusion or "no_guardrails" in req.ablate
+        audit_only = not hybrid or no_fusion or "no_guardrails" in req.ablate or not cfg["real"]["guardrails"]["auto_repair"]
         deep_result = classical = None
         repair_attempted = False
         fallback_audit: list[dict[str, Any]] = []

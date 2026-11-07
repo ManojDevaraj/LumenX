@@ -250,3 +250,11 @@ Stop at the first v0.1.0 tag. No v0.2.0 implementation before user review.
 
 - User-confirmed full suite: 359 passed, 13 GPU tests deselected. Step 5 targets passed.
 - Local release tag: core-v0.4.2.
+
+
+## core-v0.4.3 - release
+
+- Hybrid guardrails compute and report checks and warnings without automatically changing the output by default. Set `real.guardrails.auto_repair: true` to enable the existing single repair pass.
+- `no_guardrails` compares audit-only behavior with no guardrail checks.
+- User-reported 15-image ablation: audit-only PSNR 19.79, SSIM 0.816, LPIPS 0.196, clipped 0.26%; default repair PSNR 19.57, SSIM 0.721, LPIPS 0.247, clipped 0.09%.
+- User-confirmed full suite: 359 passed, 13 deselected. Tag: core-v0.4.3.
