@@ -1,12 +1,3 @@
----
-title: LumenX Low-Light Restoration
-emoji: 🌃
-colorFrom: gray
-colorTo: red
-sdk: docker
-app_port: 7860
----
-
 <div align="center">
 
 <img src="docs/readme/banner.jpg" alt="LumenX: see what the dark was hiding" width="100%">
