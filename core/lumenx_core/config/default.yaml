@@ -157,6 +157,8 @@ real:
     # Chroma-only CIEDE2000 compares both colours at equal reference lightness.
     reference_lightness: 50.0
   guardrails:
+    # Hybrid checks are informational by default; repair can be explicitly enabled.
+    auto_repair: false
     # Overexposure fails only when both absolute and incremental percentages exceed limits.
     clip_absolute_pct: 2.0
     clip_increment_pct: 0.5
@@ -191,7 +193,7 @@ models:
   # Serialization gives deterministic kernels on the pinned hardware/software stack.
   deterministic: true
   # Selects the optional fine-tuned Zero-DCE++ checkpoint when explicitly enabled.
-  zerodce_checkpoint: finetuned
+  zerodce_checkpoint: publisher
 fusion:
   # Darkness sigmoid midpoint/width and global deep contribution bias.
   dark_threshold: 0.2

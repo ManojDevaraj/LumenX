@@ -17,10 +17,9 @@ from .contracts import (CONTRACT_VERSION, Cancelled, EngineError, EngineUnavaila
 from .denoise import denoise
 from .diagnose import diagnose
 from .guardrails import audit
-from .fusion import fuse
+from .fusion import fuse, repair_deep
 from .metrics import ClassicalMetricSuite, request_metrics
 from .recoverability import estimate_recoverability
-from .recoverability import enforce_gain
 from .render import colormap, diagnosis_visuals, final_visuals, recovery_visual, uint8
 from .report import classical_report, diagnosis_chips
 from .timing import timer
@@ -146,7 +145,7 @@ class RealEngine:
             with timer(timings, "render"):
                 overlay = recovery_visual(recovery, valid, self._cfg)
             event = self._stage("recoverability", "Locating weak recorded signal",
-                                "Estimated signal confidence controls how much brightening each area can receive.",
+                                "Estimated signal confidence controls texture smoothing in near-black flat areas.",
                                 "Input SNR, estimator support and joint near-black variance.", [overlay], overlay.key,
                                 recovery.summary, timings["recoverability"])
             story.append(StoryStep(event.title, event.caption, overlay.key))
@@ -234,11 +233,12 @@ class RealEngine:
         hybrid = req.mode == "hybrid"
         recovery_enabled = "no_recoverability" not in req.ablate
         no_fusion = "no_fusion" in req.ablate
-        audit_only = not hybrid or no_fusion or "no_guardrails" in req.ablate
+        audit_only = not hybrid or no_fusion or "no_guardrails" in req.ablate or not cfg["real"]["guardrails"]["auto_repair"]
         deep_result = classical = None
         repair_attempted = False
         fallback_audit: list[dict[str, Any]] = []
         candidates = []
+        tuner_adjustment = {"highlight_repair": 1.0, "denoise_k": 0.0, "color_strength": 0.0, "exposure_trim": 1.0}
         scoring_recipe = "not_run"
         chosen_params = None
         try:
@@ -277,6 +277,7 @@ class RealEngine:
             if hybrid and "no_tuner" not in req.ablate:
                 with timer(timings, "tuner"):
                     candidates, candidate_visuals, chosen_params, scoring_recipe = tune(image, diagnosis, cfg, req.seed)
+                    tuner_adjustment = next(candidate.params for candidate in candidates if candidate.chosen)
                 for candidate, visual in zip(candidates, candidate_visuals):
                     yield StageEvent("candidate", visual.key, "Trying a light setting",
                                      "Compared this setting using fixed quality checks.",
@@ -335,15 +336,17 @@ class RealEngine:
             classical_image = classical.image if classical is not None else None
             if hybrid and not no_fusion:
                 with timer(timings, "fusion"):
-                    fused = fuse(image, deep_image, classical_image, diagnosis, recovery, cfg,
-                                 recovery_enabled=recovery_enabled)
+                    fused = (repair_deep(image, deep_image, diagnosis, cfg,
+                                         strength=tuner_adjustment["highlight_repair"]) if deep_image is not None else
+                             fuse(image, None, classical_image, diagnosis, recovery, cfg,
+                                  recovery_enabled=recovery_enabled))
                 output = fused.image
                 with timer(timings, "render"):
                     visuals = [Visual("fused", uint8(output), "stage", 768, False),
                                Visual("fusion_map", uint8(fused.weights), "map", 512, True)]
                 event = self._stage("fusion", "Combining the available evidence",
-                                    "Mixed restoration paths using recorded signal confidence and protected bright areas.",
-                                    "Input-guided normalized classical/deep/safe weights.", visuals, "fused", {}, timings["fusion"])
+                                    f"Kept the deep result and repaired {int(np.count_nonzero(fused.weights[..., 1]))} clipped or halo pixels.",
+                                    "CIDNet anchored output with a soft highlight shoulder.", visuals, "fused", {}, timings["fusion"])
                 story.append(StoryStep(event.title, event.caption, "fused"))
                 yield event
                 self._cancel(req)
@@ -355,13 +358,14 @@ class RealEngine:
                         denoised = DenoiseResult(output, gain, np.zeros_like(gain))
                     else:
                         denoised = denoise(output, diagnosis, recovery, cfg, recovery_enabled=recovery_enabled,
-                                           uniform="no_gain_denoise" in req.ablate)
+                                           uniform="no_gain_denoise" in req.ablate,
+                                           correction_mask=fused.weights[..., 1])
                     output = denoised.image
                 with timer(timings, "render"):
                     visuals = [Visual("denoised", uint8(output), "stage", 768, False),
                                Visual("gain", colormap(denoised.gain, cfg["real"]["render"]["gain_max"]), "map", 512, True),
                                Visual("denoise_strength", uint8(denoised.strength), "map", 512, True)]
-                caption = "Preserved the direct model baseline without postprocessing." if no_fusion else "Matched noise control to amplification and enforced the enabled local gain limits."
+                caption = "Preserved the direct model baseline without postprocessing." if no_fusion else "Matched texture smoothing to amplification without changing CIDNet exposure."
                 event = self._stage("denoise", "Controlling amplified noise", caption,
                                     "Uniform denoise only for no_gain_denoise; no_recoverability removes all confidence controls.",
                                     visuals, "denoised", {"bypassed": no_fusion}, timings["denoise"])
@@ -379,11 +383,8 @@ class RealEngine:
                 repair_attempted = True
                 checks = [replace(check, action="Reduced deep contribution, highlight gain and local amplification.") if check.passed is False else check for check in checks]
                 with timer(timings, "repair"):
-                    mask = np.clip((diagnosis.illumination - cfg["fusion"]["highlight_start"]) / (1 - cfg["fusion"]["highlight_start"]), 0, 1)
-                    repaired_fusion = fuse(image, deep_image, classical_image, diagnosis, recovery, cfg,
-                                          recovery_enabled=recovery_enabled,
-                                          alpha_fraction=cfg["repair"]["fusion_fraction"], repair_mask=mask)
-                    safer_recovery = replace(recovery, gain_cap=np.maximum(1, recovery.gain_cap * cfg["repair"]["gain_fraction"]))
+                    repaired_fusion = repair_deep(image, deep_image, diagnosis, cfg, strength=1.0)
+                    safer_recovery = recovery
                     output = denoise(repaired_fusion.image, diagnosis, safer_recovery, cfg,
                                      recovery_enabled=recovery_enabled, uniform="no_gain_denoise" in req.ablate).image
                 self._cancel(req)
@@ -398,8 +399,6 @@ class RealEngine:
                     output = image ** cfg["fusion"]["safe_gamma"]
                     if classical_image is not None:
                         output = np.minimum(output, classical_image)
-                    if recovery_enabled:
-                        output = enforce_gain(output, diagnosis.luminance, safer_recovery, cfg)
                     with timer(timings, "metrics"):
                         metrics = request_metrics(uint8(image), uint8(output), valid, cfg)
                     with timer(timings, "guardrails"):
@@ -422,7 +421,7 @@ class RealEngine:
                      "Used classical processing as explicitly requested."),
                     "Preserved the original processing dimensions and supplied transparency.",
                     ("Used configured fixed settings because tuning was explicitly disabled." if hybrid else "Preserved direct baseline output without hybrid postprocessing."),
-                    ("Applied input-confidence controls to hybrid processing." if hybrid and recovery_enabled and not no_fusion else "Preserved the explicitly requested baseline or confidence-control ablation."),
+                    ("Applied confidence-guided texture smoothing only in near-black flat areas." if hybrid and recovery_enabled and not no_fusion else "Preserved the explicitly requested baseline or confidence-control ablation."),
                     ("Attempted one conservative repair using cached model output." if repair_attempted else "Recorded quality checks without an automatic repair."),
                     "Left unavailable learned quality scores empty with reasons.",
                 ]

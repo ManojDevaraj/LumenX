@@ -67,5 +67,13 @@ def enhance_classical(image: np.ndarray, diagnosis: DiagnosisResult, cfg: Engine
     if cv2.minMaxLoc(image.reshape(-1))[1] > c["highlight_start"]:
         protect = np.clip((channel_max(image) - c["highlight_start"]) / (1 - c["highlight_start"]), 0, 1)
         enhanced = cv2.add(enhanced, cv2.multiply(cv2.subtract(image, enhanced), cv2.merge([protect] * 3)))
+    # CLAHE's quantised Lab black point is additive.  Pixels with no recorded
+    # signal and no local variation must remain no-signal rather than acquire a
+    # synthetic pedestal.
+    source_y = np.max(image, axis=2)
+    mean = cv2.boxFilter(source_y, cv2.CV_32F, (3, 3))
+    variance = np.maximum(cv2.boxFilter(source_y * source_y, cv2.CV_32F, (3, 3)) - mean * mean, 0)
+    empty = (source_y <= epsilon) & (variance <= cfg["real"]["recoverability"]["black_variance"])
+    enhanced[empty] = 0
     enhanced = np.clip(enhanced, 0, 1) if enhanced.size == 3 else cv2.min(cv2.max(enhanced, 0), (1, 1, 1, 1))
     return ClassicalResult(enhanced, reflectance, adjusted, params)
