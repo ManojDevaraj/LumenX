@@ -1,0 +1,16 @@
+.git
+**/.venv
+**/venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.ruff_cache
+**/.tmp
+core/weights/*.pth
+core/bench_results
+server/runs/*
+!server/runs/.gitkeep
+server/datasets
+server/results/previews
+server/results/*.jsonl
+docs/reference
