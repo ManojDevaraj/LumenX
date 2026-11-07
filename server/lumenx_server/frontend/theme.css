@@ -385,11 +385,11 @@ main > .warning-item { margin: 16px 0; }
 /* ---------- type system ----------
    One loud moment (the hero headline); everything else steps down a clear scale.
    Display: Mona Sans semi-expanded caps. Accent: Boska italic for the single key word. */
-.rh-copy h1, .page-heading h1, .console-heading h2, .story-head h2, .lr-copy h2 { font-family: var(--font-display); font-stretch: 112%; font-weight: 500; text-transform: uppercase; letter-spacing: -.025em; }
-.rh-copy h1 em, .page-heading h1 em, .console-heading h2 em, .story-head h2 em, .lr-copy h2 em, .run-header h2 em { font-family: var(--font-accent); font-stretch: normal; font-weight: 400; font-style: italic; text-transform: none; letter-spacing: -.01em; font-size: 1.1em; line-height: .8; color: var(--light); }
+.rh-copy h1, .page-heading h1, .console-heading h2, .story-head h2 { font-family: var(--font-display); font-stretch: 112%; font-weight: 500; text-transform: uppercase; letter-spacing: -.025em; }
+.rh-copy h1 em, .page-heading h1 em, .console-heading h2 em, .story-head h2 em, .run-header h2 em { font-family: var(--font-accent); font-stretch: normal; font-weight: 400; font-style: italic; text-transform: none; letter-spacing: -.01em; font-size: 1.1em; line-height: .8; color: var(--light); }
 .rh-copy h1 { max-width: 15ch; font-size: clamp(36px, 4.6vw, 70px); line-height: .98; }
 .page-heading h1 { max-width: 18ch; font-size: clamp(30px, 3.4vw, 50px); line-height: 1; }
-.console-heading h2, .story-head h2, .lr-copy h2 { font-size: clamp(26px, 2.6vw, 40px); line-height: 1.02; }
+.console-heading h2, .story-head h2 { font-size: clamp(26px, 2.6vw, 40px); line-height: 1.02; }
 .block-head h3, .hood summary strong, .method-card h3, .sp-body h3, .benchmark-content h3 { font-family: var(--font-display); font-stretch: 112%; font-weight: 500; text-transform: uppercase; letter-spacing: .01em; }
 .block-head h3 { font-size: 15px; line-height: 1.25; }
 .duo .block-head h3 { font-size: 14px; }
@@ -453,13 +453,16 @@ main > .warning-item { margin: 16px 0; }
 .story-progress { height: 1px; margin: 0 max(40px, calc(50vw - 680px)); background: var(--line-strong); }
 .story-progress i { display: block; width: 100%; height: 100%; background: var(--light); box-shadow: 0 0 12px var(--light); transform: scaleX(0); transform-origin: left; }
 
-/* ---------- landing 3D relief ---------- */
-.landing-relief { position: relative; height: 86vh; min-height: 560px; margin: 0 calc(50% - 50vw); overflow: hidden; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: #060709; }
-.landing-relief canvas { position: absolute; inset: 0; width: 100%; height: 100%; cursor: grab; touch-action: pan-y; }
-.landing-relief canvas.is-dragging { cursor: grabbing; }
-.lr-copy { position: absolute; top: 0; left: 0; right: 0; display: grid; gap: 14px; padding: 72px max(40px, calc(50vw - 680px)) 120px; background: linear-gradient(rgba(6, 7, 9, .9), rgba(6, 7, 9, .5) 60%, transparent); pointer-events: none; }
-.lr-copy h2 { max-width: 20ch; margin: 0; }
-.lr-copy p { max-width: 420px; margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+/* ---------- 3D hero scene ---------- */
+.rh-canvas { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; display: none; }
+.reveal-hero.has-3d .rh-canvas { display: block; animation: fade 1.6s var(--ease) both; }
+.reveal-hero.has-3d .rh-media { display: none; }
+.reveal-hero.has-3d::after { position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(180deg, rgba(6, 7, 9, .55) 0%, transparent 20%, transparent 55%, rgba(6, 7, 9, .7) 82%, var(--bg) 100%); content: ''; transition: opacity 1.2s var(--ease); }
+.reveal-hero.is-raised::after { opacity: .35; }
+.reveal-hero.has-3d .rh-copy, .reveal-hero.has-3d .rh-meta { transition: opacity .9s var(--ease), transform .9s var(--ease); }
+.reveal-hero.is-raised .rh-copy, .reveal-hero.is-raised .rh-meta { opacity: 0 !important; transform: translateY(24px); }
+.reveal-hero.is-raised { cursor: grab; }
+.reveal-hero.is-raised:active { cursor: grabbing; }
 
 /* ---------- ambient image glow ---------- */
 .stage-col { position: relative; isolation: isolate; }
@@ -511,9 +514,6 @@ main > .warning-item { margin: 16px 0; }
   .story-track { width: auto; padding: 0 16px 12px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: 16px; transform: none !important; }
   .story-panel { width: 78vw; scroll-snap-align: start; }
   .story-progress { display: none; }
-  .landing-relief { height: 72vh; min-height: 460px; }
-  .lr-copy { padding: 40px 16px 80px; }
-  .lr-copy p { font-size: 13px; }
   .viewer { aspect-ratio: 4 / 5; }
   .viewer:not([data-state="empty"]) { aspect-ratio: var(--ar); }
   .dropzone strong { font-size: 26px; }

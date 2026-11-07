@@ -2,6 +2,7 @@ import { enhanceImage, getBenchmarks, getGallery, getHealth, streamEnhance } fro
 import { createRelight } from './relight.js';
 import { createFlashlight } from './flashlight.js';
 import { createRelief } from './relief.js';
+import { createHeroScene } from './hero3d.js';
 
 const $ = (selector) => selector.startsWith('[') || selector.startsWith('.') || selector.startsWith('#')
   ? document.querySelector(selector)
@@ -149,12 +150,16 @@ function setViewMode(mode) {
   });
 }
 
-// Landing hero: the first real gallery photo is restored live on load, then revealed under the cursor.
-async function setupHero(items) {
+const SHOWCASE = '/static/showcase/';
+
+// Landing hero: plays back a recorded engine run (scripts/build_showcase.py) so it opens instantly and works on
+// a static host. With WebGL the photo becomes a 3D surface; otherwise a CSS flashlight reveals the restoration.
+async function setupHero() {
   const hero = $('hero');
   const hint = $('hero-hint');
   const setHint = (text) => hint.replaceChildren(node('span', 'rh-dot'), node('span', '', text));
-  createFlashlight(hero, { radius: 0.16, reducedMotion });
+  const touch = window.matchMedia('(hover: none)').matches;
+  if (touch) hero.querySelector('.rh-copy p').textContent = "A wandering light shows LumenX's restoration. Tap to raise the whole scene by the light it recovered.";
   const updateProgress = () => {
     const progress = Math.min(1, Math.max(0, window.scrollY / Math.max(1, hero.offsetHeight)));
     hero.style.setProperty('--hero-progress', progress.toFixed(3));
@@ -166,28 +171,54 @@ async function setupHero(items) {
     $('#console').scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth' });
   });
 
-  const scene = items.find((item) => !String(item.id).startsWith('synthetic')) || items[0];
-  if (!scene) { setHint('Add photos to the gallery to light the scene'); return; }
-  $('hero-dark').src = scene.image_url;
+  let manifest;
   try {
-    const response = await fetch(scene.image_url);
-    const blob = await response.blob();
-    state.heroFile = new File([blob], `${scene.id}.${extensionFor(blob.type)}`, { type: blob.type });
-    const result = await enhanceImage(state.heroFile, 'dl');
-    const lit = $('hero-lit');
-    // The hero is full-bleed, so it needs the full-resolution output rather than the 1280 px preview.
-    await new Promise((resolve, reject) => { lit.onload = resolve; lit.onerror = reject; lit.src = result.final.url; });
-    hero.classList.remove('is-pending');
-    const touch = window.matchMedia('(hover: none)').matches;
-    setHint(touch ? 'Tap to flood the scene with light' : 'Move your light · click to flood the scene');
-    const meta = $('hero-meta');
-    meta.replaceChildren(node('strong', '', scene.title));
-    meta.append(node('span', '', `${methodLabel(result.provenance.actual_method)} · restored in ${Number(result.timings_ms?.total || 0).toFixed(0)} ms`));
-    if (result.provenance.fake) meta.append(node('span', '', ' · mock engine'));
-    setupStory(state.heroFile, scene.title);
+    const response = await fetch(`${SHOWCASE}manifest.json`);
+    if (!response.ok) throw new Error('No recorded showcase.');
+    manifest = await response.json();
   } catch {
-    setHint('The engine is offline; showing the original scene');
+    setHint('Run scripts/build_showcase.py to record the landing scene');
+    return;
   }
+  const darkUrl = SHOWCASE + manifest.original;
+  const litUrl = SHOWCASE + manifest.restored;
+  const meta = $('hero-meta');
+  meta.replaceChildren(node('strong', '', manifest.title));
+  meta.append(node('span', '', `${methodLabel(manifest.method)} · recorded run, ${(manifest.total_ms / 1000).toFixed(1)} s on ${String(manifest.device || 'cpu').toUpperCase()}`));
+  meta.append(node('br'), node('span', '', manifest.attribution));
+  if (manifest.fake) meta.append(node('span', '', ' · mock engine'));
+  fetch(darkUrl).then((response) => response.blob()).then((blob) => {
+    state.heroFile = new File([blob], 'showcase.jpg', { type: blob.type || 'image/jpeg' });
+  }).catch(() => {});
+
+  const scene = createHeroScene($('hero-canvas'), {
+    darkUrl, litUrl, heightUrl: SHOWCASE + manifest.heightmap, reducedMotion,
+    onReady: () => {
+      hero.classList.add('has-3d');
+      hero.classList.remove('is-pending');
+      setHint(touch ? 'Tap to raise the night into 3D' : 'Move your light · click to raise the night');
+    },
+  });
+  if (scene) {
+    let down = null;
+    hero.addEventListener('pointerdown', (event) => { down = { x: event.clientX, y: event.clientY }; });
+    hero.addEventListener('click', (event) => {
+      if (event.target.closest('a, button')) return;
+      // A drag to orbit should not also count as a click.
+      if (down && Math.hypot(event.clientX - down.x, event.clientY - down.y) > 6) return;
+      const raised = !scene.raised;
+      scene.setRaised(raised);
+      hero.classList.toggle('is-raised', raised);
+      setHint(raised ? (touch ? 'Tap to lower' : 'Drag to orbit · click to lower') : (touch ? 'Tap to raise the night into 3D' : 'Move your light · click to raise the night'));
+    });
+  } else {
+    $('hero-dark').src = darkUrl;
+    $('hero-lit').src = litUrl;
+    createFlashlight(hero, { radius: 0.16, reducedMotion });
+    hero.classList.remove('is-pending');
+    setHint(touch ? 'Tap to flood the scene with light' : 'Move your light · click to flood the scene');
+  }
+  setupStory(manifest);
 }
 
 // Wraps each character of a heading so CSS can stagger it in; inline elements such as <em> keep their styling.
@@ -231,7 +262,7 @@ function setupCursor() {
     const interactive = event.target.closest('a, button, label, .gallery-item, .lens, .stage-card, canvas, input');
     cursor.classList.toggle('is-hover', Boolean(interactive));
     // The hero and flashlight viewer draw their own light, so the ring steps aside there.
-    cursor.classList.toggle('is-hidden', Boolean(event.target.closest('.reveal-hero:not(.is-flooded) .rh-media, .viewer[data-view="flashlight"][data-state="done"]')));
+    cursor.classList.toggle('is-hidden', Boolean(event.target.closest('.reveal-hero:not(.is-flooded):not(.is-raised) .rh-media, .reveal-hero:not(.is-raised) .rh-canvas, .viewer[data-view="flashlight"][data-state="done"]')));
   }, { passive: true });
   document.addEventListener('pointerleave', () => cursor.classList.add('is-hidden'));
   const follow = () => {
@@ -263,18 +294,16 @@ function setupMarquee(items) {
   [...track.children].forEach((child) => track.append(child.cloneNode(true)));
 }
 
-// Story: the hero photo is also run through the full hybrid path so its real stages can be scrolled through.
-async function setupStory(file, sceneTitle) {
+// Story: the recorded showcase run's real stages, scrolled sideways while the section is pinned.
+function setupStory(manifest) {
   const section = $('story');
   const track = $('story-track');
-  let result;
-  try { result = await enhanceImage(file, 'hybrid'); } catch { return; }
-  const stages = result.stages.filter((stage) => stage.image_url);
+  const stages = manifest.stages || [];
   if (!stages.length) return;
   track.replaceChildren();
   const words = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
   $('story-count').textContent = words[stages.length + 1] || String(stages.length + 1);
-  $('story-meta').textContent = `${sceneTitle} · adaptive hybrid · ${Number(result.timings_ms?.total || 0).toFixed(0)} ms on ${result.provenance.device.toUpperCase()}${result.provenance.fake ? ' · mock engine' : ''}`;
+  $('story-meta').textContent = `${manifest.title} · ${methodLabel(manifest.method)} · ${(manifest.total_ms / 1000).toFixed(1)} s on ${String(manifest.device || 'cpu').toUpperCase()}${manifest.fake ? ' · mock engine' : ''}`;
   const addPanel = (number, title, caption, url, isFinal = false) => {
     const panel = node('article', `story-panel${isFinal ? ' is-final' : ''}`);
     const frame = node('div', 'sp-img');
@@ -289,8 +318,8 @@ async function setupStory(file, sceneTitle) {
     track.append(panel);
     return body;
   };
-  stages.forEach((stage, index) => addPanel(`STEP ${String(index + 1).padStart(2, '0')}`, stage.title || stage.name, stage.caption, stage.image_url));
-  const finalBody = addPanel('RESULT', 'The restored night', 'Every step above was measured from this one photo. Now try it on yours.', result.final.preview_url, true);
+  stages.forEach((stage, index) => addPanel(`STEP ${String(index + 1).padStart(2, '0')}`, stage.title, stage.caption, SHOWCASE + stage.image));
+  const finalBody = addPanel('RESULT', 'The restored scene', 'Every step above was measured from this one photo. Now try it on yours.', SHOWCASE + manifest.restored, true);
   const cta = node('a', 'sp-cta', 'Restore your own →');
   cta.href = '#console';
   cta.addEventListener('click', (event) => {
@@ -300,16 +329,6 @@ async function setupStory(file, sceneTitle) {
   });
   finalBody.append(cta);
   section.hidden = false;
-
-  const heightSource = result.maps?.heightmap || result.maps?.illumination_gray;
-  if (heightSource) {
-    try {
-      createRelief($('landing-relief-canvas'), result.final.preview_url, heightSource, { reducedMotion });
-      $('landing-relief').hidden = false;
-    } catch (error) {
-      console.warn('Landing relief unavailable:', error);
-    }
-  }
 
   const pinned = () => window.matchMedia('(min-width: 721px)').matches && !reducedMotion;
   const layout = () => {
@@ -1086,7 +1105,7 @@ async function boot() {
   const [items] = await Promise.all([loadGallery(), loadHealth()]);
   setInterval(loadHealth, 15000);
   setupMarquee(items);
-  setupHero(items);
+  setupHero();
 }
 
 boot();

@@ -36,6 +36,7 @@
     <main>
       <section class="tab-panel enhance-panel is-active" data-role="panel-enhance" data-panel="enhance">
         <section class="reveal-hero is-pending" data-role="hero">
+          <canvas class="rh-canvas" data-role="hero-canvas" aria-label="The landing photo as a 3D surface: move to light it, click to raise the whole scene"></canvas>
           <div class="rh-media" aria-hidden="true">
             <img class="rh-dark" data-role="hero-dark" alt="">
             <img class="rh-lit" data-role="hero-lit" alt="">
@@ -45,9 +46,9 @@
           <div class="rh-copy">
             <span class="eyebrow"><span class="eyebrow-line"></span>LumenX · adaptive low-light restoration</span>
             <h1>See what the <em>dark</em> was hiding.</h1>
-            <p>Move your light across the scene. Everything it touches was recovered from this photo by LumenX, live, a moment ago.</p>
+            <p>Your cursor is the light. Wherever it falls, LumenX's restoration surfaces and the scene rises by the light it recovered.</p>
           </div>
-          <div class="rh-hint mono" data-role="hero-hint"><span class="rh-dot"></span><span>Developing the scene…</span></div>
+          <div class="rh-hint mono" data-role="hero-hint"><span class="rh-dot"></span><span>Loading the scene…</span></div>
           <div class="rh-meta mono" data-role="hero-meta"></div>
           <a class="rh-cta" href="#console" data-role="hero-cta"><span>Restore your own night</span><span class="rh-arrow" aria-hidden="true">↓</span></a>
         </section>
@@ -72,14 +73,6 @@
           </div>
         </section>
 
-        <section class="landing-relief" data-role="landing-relief" hidden data-reveal>
-          <canvas data-role="landing-relief-canvas" aria-label="3D relief of the light recovered from the landing photo; drag to orbit"></canvas>
-          <div class="lr-copy">
-            <span class="eyebrow"><span class="eyebrow-line"></span>The light, measured</span>
-            <h2>Every <em>lamp</em> becomes a peak.</h2>
-            <p>The restored scene draped over the illumination map LumenX computed for it. Drag to orbit.</p>
-          </div>
-        </section>
 
         <div class="console-heading" id="console" data-reveal>
           <span class="eyebrow"><span class="eyebrow-line"></span>The console</span>

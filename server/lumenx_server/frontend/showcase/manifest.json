@@ -1,0 +1,61 @@
+{
+  "title": "Salon at dusk",
+  "attribution": "Photo by Abigail Keenan on Unsplash (Unsplash License).",
+  "mode": "hybrid",
+  "method": "hybrid",
+  "device": "cpu",
+  "fake": false,
+  "core_version": "0.4.0",
+  "total_ms": 4690,
+  "input": {
+    "width": 1200,
+    "height": 800
+  },
+  "original": "original.jpg",
+  "restored": "restored.jpg",
+  "heightmap": "heightmap.png",
+  "stages": [
+    {
+      "name": "diagnose",
+      "title": "Finding the recorded light",
+      "caption": "Measured the recorded light and noise before selecting the restoration path.",
+      "image": "stage-01.jpg"
+    },
+    {
+      "name": "recoverability",
+      "title": "Locating weak recorded signal",
+      "caption": "Estimated signal confidence limits brightening unless that control was explicitly disabled.",
+      "image": "stage-02.jpg"
+    },
+    {
+      "name": "tuner",
+      "title": "Choosing a setting",
+      "caption": "Selected the feasible setting with the strongest fixed score.",
+      "image": "stage-03.jpg"
+    },
+    {
+      "name": "classical",
+      "title": "Preparing the classical result",
+      "caption": "Applied the selected brightness and colour settings while protecting highlights.",
+      "image": "stage-04.jpg"
+    },
+    {
+      "name": "deep",
+      "title": "Running the restoration path",
+      "caption": "Used the recorded model or its explicitly reported fallback at the original image size.",
+      "image": "stage-05.jpg"
+    },
+    {
+      "name": "fusion",
+      "title": "Combining the available evidence",
+      "caption": "Kept the deep result and repaired 168388 clipped or halo pixels.",
+      "image": "stage-06.jpg"
+    },
+    {
+      "name": "denoise",
+      "title": "Controlling amplified noise",
+      "caption": "Matched texture smoothing to amplification without changing CIDNet exposure.",
+      "image": "stage-07.jpg"
+    }
+  ]
+}
