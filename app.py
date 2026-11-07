@@ -327,7 +327,8 @@ html, body, .gradio-container {
 .gradio-container .lx-image-input { background: #100d0d !important; }
 .gradio-container .lx-image-input [data-testid="image"] { min-height: 300px; }
 .gradio-container .lx-image-input button, .gradio-container .lx-image-output button { color: var(--lx-yellow) !important; }
-.gradio-container .lx-mode-select { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.gradio-container .lx-mode-select { display: block !important; min-width: 0 !important; overflow: visible !important; padding: 0 !important; border: 0 !important; background: transparent !important; }
+.gradio-container .lx-mode-select > .wrap { display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px !important; width: 100%; }
 .gradio-container .lx-mode-select label {
   min-height: 64px; justify-content: center; border: 1px solid #3b2929 !important; border-radius: 11px !important;
   background: #100d0d !important; color: #e8ddd4 !important; transition: .2s ease;
@@ -373,7 +374,7 @@ html, body, .gradio-container {
   .gradio-container .lx-hero { padding: 30px 2px 22px; }
   .gradio-container .lx-hero-orbit { flex-basis: 82px; width: 82px; height: 82px; transform: scale(.8); margin-right: -10px; }
   .gradio-container .lx-panel { padding: 13px; }
-  .gradio-container .lx-mode-select { grid-template-columns: 1fr; }
+  .gradio-container .lx-mode-select > .wrap { grid-template-columns: 1fr; }
   .gradio-container .lx-mode-select label { min-height: 48px; justify-content: flex-start; }
 }
 @media (prefers-reduced-motion: reduce) {
