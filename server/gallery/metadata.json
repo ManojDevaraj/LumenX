@@ -1,5 +1,47 @@
 [
   {
+    "id": "tree-path",
+    "title": "Tree-lined path at night",
+    "why_hard": "Lamps, foliage and brick facades buried at about 9% brightness.",
+    "attribution": "Photo by Fons Heijnsbroek on Unsplash (Unsplash License).",
+    "image": "tree-path.jpg"
+  },
+  {
+    "id": "empty-alley",
+    "title": "Empty alley",
+    "why_hard": "A long wall and wiring that vanish into shadow.",
+    "attribution": "Photo by Julien (domsson) on Unsplash (Unsplash License).",
+    "image": "empty-alley.jpg"
+  },
+  {
+    "id": "rider-alley",
+    "title": "Rider under a wall lamp",
+    "why_hard": "About 4% brightness; one lamp against near-black streets.",
+    "attribution": "Photo by Julien (domsson) on Unsplash (Unsplash License).",
+    "image": "rider-alley.jpg"
+  },
+  {
+    "id": "curtain-window",
+    "title": "Window with yellow curtain",
+    "why_hard": "A glowing window surrounded by dark balconies and plants.",
+    "attribution": "Photo by Julio Lopez on Unsplash (Unsplash License).",
+    "image": "curtain-window.jpg"
+  },
+  {
+    "id": "venice-canal",
+    "title": "Venice canal at night",
+    "why_hard": "Bright window lamps beside water and facades lost in shadow.",
+    "attribution": "LIME low-light test set, via github.com/Li-Chongyi/Zero-DCE (research benchmark image).",
+    "image": "venice-canal.png"
+  },
+  {
+    "id": "courtyard-dusk",
+    "title": "Courtyard at dusk",
+    "why_hard": "Wide scene with a street lamp, deep shade and fine paving detail.",
+    "attribution": "LIME low-light test set, via github.com/Li-Chongyi/Zero-DCE (research benchmark image).",
+    "image": "courtyard-dusk.png"
+  },
+  {
     "id": "synthetic-street",
     "title": "Synthetic night street",
     "why_hard": "Dark facades, small lamps, and uneven red and blue light.",

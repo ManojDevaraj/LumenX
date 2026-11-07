@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import time
 from contextlib import asynccontextmanager
 from io import BytesIO
@@ -65,7 +66,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if config.engine == "fake":
             engine = create_fake_engine(stage_delay_ms=config.mock_stage_delay_ms)
         else:
-            engine = create_engine()
+            # Optional core override, e.g. eval/pretrained_zerodce.yaml to use the publisher Zero-DCE++ checkpoint.
+            engine = create_engine(os.environ.get("LUMENX_CORE_CONFIG") or None)
         lane = EngineLane(max_pending=config.max_pending)
         try:
             await lane.warmup(engine.warmup)
