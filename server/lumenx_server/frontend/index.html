@@ -294,42 +294,74 @@
       </section>
 
       <section class="tab-panel about-panel" data-role="panel-about" data-panel="about" hidden>
-        <div class="page-heading">
-          <span class="eyebrow"><span class="eyebrow-line"></span>About the method</span>
-          <h1>How LumenX <em>sees</em> in the dark.</h1>
-          <p>LumenX first diagnoses a photo: where light is weak, how noisy it is, and how much real signal survived. It restores the scene with CIDNet, a deep model, then repairs blown highlights pixel by pixel, removes noise only where brightening amplified it, and audits the result with safety checks. Every step is shown, so the result can be inspected instead of trusted blindly.</p>
+        <div class="about-hero">
+          <div class="about-hero-copy">
+            <span class="eyebrow"><span class="eyebrow-line"></span>About the method</span>
+            <h1>How LumenX <em>sees</em> in the dark.</h1>
+            <p>Most enhancers brighten a photo and hope. LumenX measures what the camera actually recorded, restores it with a deep model, repairs what brightening breaks, and shows its working at every step.</p>
+            <div class="about-tags mono"><span>CIDNet</span><span>Highlight repair</span><span>Gain-aware denoise</span><span>Safety audit</span></div>
+          </div>
+          <figure class="about-hero-media" data-role="about-hero-media">
+            <img data-role="about-hero-image" alt="The landing photo after LumenX restoration">
+            <figcaption class="mono" data-role="about-hero-caption"></figcaption>
+          </figure>
         </div>
 
-        <div class="pipeline-diagram" aria-label="LumenX pipeline">
-          <div class="pd-node"><span class="pd-step mono">01</span><strong>Diagnose</strong><p>Measures light level, noise and how much signal was recorded.</p></div>
-          <div class="pd-node"><span class="pd-step mono">02</span><strong>CIDNet</strong><p>A deep model brightens the scene in a colour space built for low light.</p></div>
-          <div class="pd-node"><span class="pd-step mono">03</span><strong>Highlight repair</strong><p>Blends in a protected copy wherever lamps and windows would blow out.</p></div>
-          <div class="pd-node"><span class="pd-step mono">04</span><strong>Denoise</strong><p>Cleans grain only where the brightening amplified it.</p></div>
-          <div class="pd-node"><span class="pd-step mono">05</span><strong>Audit</strong><p>Checks highlights, colour shift, detail and halos, and reports every result.</p></div>
-        </div>
+        <section class="about-steps">
+          <div class="about-section-head">
+            <span class="eyebrow"><span class="eyebrow-line"></span>The pipeline</span>
+            <h2>Five steps from <em>black</em> to light.</h2>
+            <p>Each image below is the engine's real output at that step, from the recorded run on the landing page.</p>
+          </div>
+          <ol class="step-timeline" data-role="step-timeline">
+            <li class="step" data-stage="diagnose"><figure class="step-media"><img alt="Diagnose step output"></figure><div class="step-copy"><span class="step-num">01</span><h3>Diagnose</h3><p>Measures how dark the scene is, how noisy the sensor was, and how much real signal survived, before choosing anything.</p><p class="step-log mono"></p></div></li>
+            <li class="step" data-stage="deep"><figure class="step-media"><img alt="CIDNet step output"></figure><div class="step-copy"><span class="step-num">02</span><h3>Restore with CIDNet</h3><p>A deep model brightens the scene in a colour space built for low light, recovering tone and colour that simple gain would wash out.</p><p class="step-log mono"></p></div></li>
+            <li class="step" data-stage="fusion"><figure class="step-media"><img alt="Highlight repair step output"></figure><div class="step-copy"><span class="step-num">03</span><h3>Repair highlights</h3><p>Where lamps and windows would blow out, LumenX blends in a protected copy pixel by pixel instead of clipping them to white.</p><p class="step-log mono"></p></div></li>
+            <li class="step" data-stage="denoise"><figure class="step-media"><img alt="Denoise step output"></figure><div class="step-copy"><span class="step-num">04</span><h3>Clean the grain</h3><p>Noise is removed only where brightening amplified it, so texture in well-lit areas is left untouched.</p><p class="step-log mono"></p></div></li>
+            <li class="step" data-stage="final"><figure class="step-media"><img alt="Final restored image"></figure><div class="step-copy"><span class="step-num">05</span><h3>Audit and report</h3><p>Every result is checked for blown highlights, colour shift, lost detail and halos, and each check is reported with its value, pass or flag.</p><p class="step-log mono"></p></div></li>
+          </ol>
+        </section>
 
-        <div class="about-grid">
-          <article class="surface team-card">
-            <span class="label">Team</span>
-            <h3 class="team-name">Black Rock</h3>
+        <section class="principles">
+          <article><span class="mono">I</span><h3>Measured, not guessed</h3><p>Settings are chosen per photo from what the sensor recorded, not from a fixed preset.</p></article>
+          <article><span class="mono">II</span><h3>Shown, not hidden</h3><p>Every stage, map and rejected setting is visible, so a result can be inspected instead of trusted blindly.</p></article>
+          <article><span class="mono">III</span><h3>Honest when unsure</h3><p>Unmeasured scores stay empty with a reason, and recoverability is reported as an estimate.</p></article>
+        </section>
+
+        <section class="team-section">
+          <div class="team-mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32">
+              <defs><linearGradient id="facet-lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe9c7"/><stop offset="1" stop-color="#b98a4e"/></linearGradient></defs>
+              <path d="M4 22.5 9.6 8.4 19.2 4.5 28 12.6 27 24.4 14.8 28Z" fill="#111317" stroke="rgba(244,215,168,.45)" stroke-width=".5"/>
+              <path d="M9.6 8.4 19.2 4.5 28 12.6 16.8 15.2Z" fill="url(#facet-lg)"/>
+              <path d="M16.8 15.2 28 12.6 27 24.4Z" fill="#2a2620"/>
+            </svg>
+          </div>
+          <div class="team-copy">
+            <span class="eyebrow"><span class="eyebrow-line"></span>The team</span>
+            <h2 class="team-name">Black Rock</h2>
             <ol class="team-list">
-              <li>Nikhil Sridhara</li>
-              <li>Manoj D</li>
-              <li>Mohit D</li>
+              <li><span class="mono">01</span>Nikhil Sridhara</li>
+              <li><span class="mono">02</span>Manoj D</li>
+              <li><span class="mono">03</span>Mohit D</li>
             </ol>
-            <a class="sp-cta" href="https://github.com/ManojDevaraj/LumenX" target="_blank" rel="noopener">Source on GitHub →</a>
-          </article>
-          <article class="surface credits-card">
-            <span class="label">Credits &amp; licences</span>
-            <dl class="credits">
-              <dt>HVI-CIDNet</dt><dd>Architecture and weights by Fediory Feng et al., MIT licence.</dd>
-              <dt>Zero-DCE++</dt><dd>Li, Guo &amp; Loy, IEEE TPAMI 2021. CC BY-NC 4.0: non-commercial research use only.</dd>
-              <dt>LOL-v1</dt><dd>Low-light paired dataset, Wei et al., BMVC 2018. Used for evaluation only.</dd>
-              <dt>Demo photos</dt><dd>Abigail Keenan, Fons Heijnsbroek, Julien (domsson) and Julio Lopez on Unsplash (Unsplash Licence); LIME benchmark images via the Zero-DCE repository.</dd>
-              <dt>Type</dt><dd>Mona Sans and Geist Mono (SIL Open Font Licence); Boska (ITF Free Font Licence).</dd>
-            </dl>
-          </article>
-        </div>
+            <a class="ghost-link" href="https://github.com/ManojDevaraj/LumenX" target="_blank" rel="noopener">Source on GitHub <span aria-hidden="true">↗</span></a>
+          </div>
+        </section>
+
+        <section class="credits-section">
+          <div class="about-section-head">
+            <span class="eyebrow"><span class="eyebrow-line"></span>Credits &amp; licences</span>
+            <h2>Built on <em>open</em> work.</h2>
+          </div>
+          <div class="credit-grid">
+            <article><span class="label">Deep model</span><h3>HVI-CIDNet</h3><p>Architecture and weights by Fediory Feng et al. MIT licence.</p></article>
+            <article><span class="label">Curve model</span><h3>Zero-DCE++</h3><p>Li, Guo &amp; Loy, IEEE TPAMI 2021. CC BY-NC 4.0, non-commercial research use only.</p></article>
+            <article><span class="label">Evaluation data</span><h3>LOL-v1</h3><p>Paired low-light dataset, Wei et al., BMVC 2018. Used for evaluation only.</p></article>
+            <article><span class="label">Demo photos</span><h3>Unsplash &amp; LIME</h3><p>Abigail Keenan, Fons Heijnsbroek, Julien (domsson) and Julio Lopez on Unsplash; LIME benchmark images via the Zero-DCE repository.</p></article>
+            <article><span class="label">Type</span><h3>Mona Sans · Boska</h3><p>Mona Sans and Geist Mono under the SIL Open Font Licence; Boska under the ITF Free Font Licence.</p></article>
+          </div>
+        </section>
       </section>
     </main>
     <footer class="footer"><span>Black Rock · Nikhil Sridhara, Manoj D, Mohit D</span><span>Input evidence guides the lift.</span></footer>
