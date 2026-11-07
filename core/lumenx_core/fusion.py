@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 
 from .config import EngineConfig
-from .diagnose import channel_max
+from .diagnose import channel_max, luminance
 from .types import DiagnosisResult, FusionResult, RecoveryResult
 
 
@@ -65,3 +65,30 @@ def fuse(image: np.ndarray, deep: np.ndarray | None, classical: np.ndarray | Non
     if classical is not None:
         output += classical * weights[..., 1:2]
     return FusionResult(np.ascontiguousarray(np.clip(output, 0, 1), dtype=np.float32), weights)
+
+
+def repair_deep(image: np.ndarray, deep: np.ndarray, diagnosis: DiagnosisResult,
+                cfg: EngineConfig, *, strength: float = 1.0) -> FusionResult:
+    """Keep full-resolution CIDNet output and repair only local highlights."""
+    c = cfg["fusion"]
+    h, w = image.shape[:2]
+    clipped = (channel_max(deep) >= 0.98).astype(np.float32)
+    # Overshoot halo mask around diagnosed hotspot rings.
+    hotspot = np.zeros((h, w), np.uint8)
+    for x, y, bw, bh in diagnosis.hotspots:
+        hotspot[max(0, y):min(h, y + bh), max(0, x):min(w, x + bw)] = 1
+    ring = cv2.dilate(hotspot, np.ones((9, 9), np.uint8)).astype(bool) & ~hotspot.astype(bool)
+    local_lift = luminance(deep, cfg) - luminance(image, cfg)
+    blur_lift = cv2.GaussianBlur(local_lift, (0, 0), 3)
+    overshoot = (np.maximum(local_lift - blur_lift, 0) > 0.08) & ring
+    mask = np.maximum(clipped, overshoot.astype(np.float32))
+    smooth = cv2.ximgproc.guidedFilter(diagnosis.luminance, mask, 7, 1e-3)
+    smooth = np.clip(smooth * strength, 0, 1)[..., None]
+    # Classical enhancement is deliberately not a fusion contributor: this is a
+    # local blend from CIDNet to its own soft highlight shoulder.
+    compressed = np.where(deep > 0.8, 0.8 + 0.2 * np.tanh((deep - 0.8) / 0.2), deep)
+    classical_weights = np.zeros((h, w, 3), np.float32)
+    classical_weights[..., 1] = smooth[..., 0]
+    classical_weights[..., 0] = 1 - smooth[..., 0]
+    output = deep * (1 - smooth) + compressed * smooth
+    return FusionResult(np.ascontiguousarray(np.clip(output, 0, 1), dtype=np.float32), classical_weights)

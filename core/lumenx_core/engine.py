@@ -17,7 +17,7 @@ from .contracts import (CONTRACT_VERSION, Cancelled, EngineError, EngineUnavaila
 from .denoise import denoise
 from .diagnose import diagnose
 from .guardrails import audit
-from .fusion import fuse
+from .fusion import fuse, repair_deep
 from .metrics import ClassicalMetricSuite, request_metrics
 from .recoverability import estimate_recoverability
 from .recoverability import enforce_gain
@@ -335,15 +335,16 @@ class RealEngine:
             classical_image = classical.image if classical is not None else None
             if hybrid and not no_fusion:
                 with timer(timings, "fusion"):
-                    fused = fuse(image, deep_image, classical_image, diagnosis, recovery, cfg,
-                                 recovery_enabled=recovery_enabled)
+                    fused = (repair_deep(image, deep_image, diagnosis, cfg) if deep_image is not None else
+                             fuse(image, None, classical_image, diagnosis, recovery, cfg,
+                                  recovery_enabled=recovery_enabled))
                 output = fused.image
                 with timer(timings, "render"):
                     visuals = [Visual("fused", uint8(output), "stage", 768, False),
                                Visual("fusion_map", uint8(fused.weights), "map", 512, True)]
                 event = self._stage("fusion", "Combining the available evidence",
-                                    "Mixed restoration paths using recorded signal confidence and protected bright areas.",
-                                    "Input-guided normalized classical/deep/safe weights.", visuals, "fused", {}, timings["fusion"])
+                                    f"Kept the deep result and repaired {int(np.count_nonzero(fused.weights[..., 1]))} clipped or halo pixels.",
+                                    "CIDNet anchored output with a soft highlight shoulder.", visuals, "fused", {}, timings["fusion"])
                 story.append(StoryStep(event.title, event.caption, "fused"))
                 yield event
                 self._cancel(req)
@@ -361,7 +362,7 @@ class RealEngine:
                     visuals = [Visual("denoised", uint8(output), "stage", 768, False),
                                Visual("gain", colormap(denoised.gain, cfg["real"]["render"]["gain_max"]), "map", 512, True),
                                Visual("denoise_strength", uint8(denoised.strength), "map", 512, True)]
-                caption = "Preserved the direct model baseline without postprocessing." if no_fusion else "Matched noise control to amplification and enforced the enabled local gain limits."
+                caption = "Preserved the direct model baseline without postprocessing." if no_fusion else "Matched texture smoothing to amplification without changing CIDNet exposure."
                 event = self._stage("denoise", "Controlling amplified noise", caption,
                                     "Uniform denoise only for no_gain_denoise; no_recoverability removes all confidence controls.",
                                     visuals, "denoised", {"bypassed": no_fusion}, timings["denoise"])
@@ -379,11 +380,8 @@ class RealEngine:
                 repair_attempted = True
                 checks = [replace(check, action="Reduced deep contribution, highlight gain and local amplification.") if check.passed is False else check for check in checks]
                 with timer(timings, "repair"):
-                    mask = np.clip((diagnosis.illumination - cfg["fusion"]["highlight_start"]) / (1 - cfg["fusion"]["highlight_start"]), 0, 1)
-                    repaired_fusion = fuse(image, deep_image, classical_image, diagnosis, recovery, cfg,
-                                          recovery_enabled=recovery_enabled,
-                                          alpha_fraction=cfg["repair"]["fusion_fraction"], repair_mask=mask)
-                    safer_recovery = replace(recovery, gain_cap=np.maximum(1, recovery.gain_cap * cfg["repair"]["gain_fraction"]))
+                    repaired_fusion = repair_deep(image, deep_image, diagnosis, cfg, strength=1.0)
+                    safer_recovery = recovery
                     output = denoise(repaired_fusion.image, diagnosis, safer_recovery, cfg,
                                      recovery_enabled=recovery_enabled, uniform="no_gain_denoise" in req.ablate).image
                 self._cancel(req)

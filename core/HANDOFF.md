@@ -2,6 +2,17 @@
 
 ## core-v0.4.1 — release verified
 
+## core-v0.4.2 development — Step 1
+
+- Kept the reviewed publisher Zero-DCE++ default. Replaced the partial hybrid
+  wiring with a CIDNet-anchored full-resolution path: only clipped (>=0.98) or
+  hotspot-overshoot pixels are softly guided toward CIDNet's own tanh highlight
+  shoulder. Classical output is not a highlight-fusion source.
+- Removed recoverability gain enforcement from denoise, including its early
+  bypass, so denoise is a texture correction and does not darken CIDNet output.
+- The `no_dl` ablation retains its existing classical-only fusion fallback to
+  preserve the frozen stage schedule. Step 1 regression gate: 22 passed.
+
 External verification found the tuned-hybrid proxy mask crash at 720p/1080p.
 The candidate replaces the one-channel proxy operation with a direct two-dimensional
 nearest-neighbour resize and adds CPU/GPU tests for flat and noisy non-black 720p

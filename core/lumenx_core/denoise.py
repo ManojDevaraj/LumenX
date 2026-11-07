@@ -7,18 +7,17 @@ import numpy as np
 
 from .config import EngineConfig
 from .diagnose import luminance
-from .recoverability import enforce_gain
 from .types import DenoiseResult, DiagnosisResult, RecoveryResult
 
 
 def denoise(image: np.ndarray, diagnosis: DiagnosisResult, recovery: RecoveryResult, cfg: EngineConfig, *,
             recovery_enabled: bool = True, uniform: bool = False) -> DenoiseResult:
-    """Denoise RGB via YCrCb, then enforce confidence limits on the actual RGB result."""
+    """Denoise RGB via YCrCb; confidence controls texture smoothing only."""
     c = cfg["real"]["denoise"]
     epsilon = cfg["real"]["epsilon"]
     y = luminance(image, cfg)
     if diagnosis.raw["already_bright"] or diagnosis.raw["noise_sigma"] < c["minimum_sigma"]:
-        result = enforce_gain(image, diagnosis.luminance, recovery, cfg, output_y=y) if recovery_enabled else image
+        result = image
         gain = luminance(result, cfg) / np.maximum(diagnosis.luminance, epsilon)
         return DenoiseResult(result, gain, np.zeros_like(diagnosis.luminance))
     else:
@@ -47,6 +46,8 @@ def denoise(image: np.ndarray, diagnosis: DiagnosisResult, recovery: RecoveryRes
             channels[index] = cv2.addWeighted(channels[index], c["chroma_strength"], original[index], 1 - c["chroma_strength"], 0)
         mixed = cv2.merge(channels)
         result = cv2.cvtColor(mixed, cv2.COLOR_YCrCb2RGB)
-    result = enforce_gain(result, diagnosis.luminance, recovery, cfg) if recovery_enabled else np.clip(result, 0, 1)
+    # Recoverability modulates texture smoothing only; it must never reduce the
+    # deep model's exposure through a post-denoise gain cap.
+    result = np.clip(result, 0, 1)
     gain = luminance(result, cfg) / np.maximum(diagnosis.luminance, epsilon)
     return DenoiseResult(result, gain, strength)
