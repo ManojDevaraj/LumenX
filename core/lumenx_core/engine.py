@@ -341,7 +341,6 @@ class RealEngine:
                              fuse(image, None, classical_image, diagnosis, recovery, cfg,
                                   recovery_enabled=recovery_enabled))
                 output = fused.image
-                output = np.clip(output * tuner_adjustment["exposure_trim"], 0, 1)
                 with timer(timings, "render"):
                     visuals = [Visual("fused", uint8(output), "stage", 768, False),
                                Visual("fusion_map", uint8(fused.weights), "map", 512, True)]
@@ -359,7 +358,8 @@ class RealEngine:
                         denoised = DenoiseResult(output, gain, np.zeros_like(gain))
                     else:
                         denoised = denoise(output, diagnosis, recovery, cfg, recovery_enabled=recovery_enabled,
-                                           uniform="no_gain_denoise" in req.ablate)
+                                           uniform="no_gain_denoise" in req.ablate,
+                                           correction_mask=fused.weights[..., 1])
                     output = denoised.image
                 with timer(timings, "render"):
                     visuals = [Visual("denoised", uint8(output), "stage", 768, False),

@@ -32,7 +32,7 @@ def clipiqa_batch(images: list[np.ndarray]) -> list[float] | None:
         with torch.inference_mode():
             return [float(value) for value in _CLIPIQA(batch).detach().cpu().reshape(-1)]
     except Exception as exc:  # optional model dependency must never break processing
-        _CLIPIQA_ERROR = f"CLIP-IQA unavailable: {type(exc).__name__}."
+        _CLIPIQA_ERROR = f"CLIP-IQA unavailable: {type(exc).__name__}: {exc}"
         return None
 
 
@@ -55,7 +55,7 @@ def _iqa(name: str, images: list[np.ndarray], reference: list[np.ndarray] | None
             return None
         return result
     except Exception as exc:
-        _IQA_ERRORS[name] = f"{name.upper()} unavailable: {type(exc).__name__}."
+        _IQA_ERRORS[name] = f"{name.upper()} unavailable: {type(exc).__name__}: {exc}"
         return None
 
 
@@ -225,15 +225,12 @@ class ClassicalMetricSuite:
 
     def unavailable(self) -> dict[str, str]:
         """Supply reasons for every conditionally or permanently unavailable metric."""
-        reasons = dict.fromkeys(("niqe", "brisque", "musiq", "lpips", "ssim",
-                                "err_recovered", "err_estimated", "err_unrecoverable",
+        reasons = dict.fromkeys(("err_recovered", "err_estimated", "err_unrecoverable",
                                 "recovered_pct", "estimated_pct", "unrecoverable_pct"),
                                "Not implemented in the classical-only v0.2.0 milestone.")
         if _CLIPIQA_ERROR is not None:
             reasons["clipiqa"] = _CLIPIQA_ERROR
         reasons.update(_IQA_ERRORS)
-        for name in ("niqe", "brisque", "clipiqa", "musiq", "ssim", "lpips"):
-            reasons.setdefault(name, f"{name.upper()} was not available for this evaluation.")
         reasons.update({
             "psnr": "An exact match has infinite PSNR; returned as None.",
             "psnr_gt_mean": "Zero prediction mean or an exact adjusted match is undefined/infinite.",
@@ -263,7 +260,7 @@ def request_metrics(inp: np.ndarray, out: np.ndarray, valid: np.ndarray, cfg: En
     suite = ClassicalMetricSuite(cfg)
     learned_before, learned_after = suite.unpaired(first), suite.unpaired(last)
     unavailable = suite.unavailable()
-    reasons.update({key: unavailable[key] for key in ("niqe", "brisque", "musiq")})
+    reasons.update({key: unavailable[key] for key in ("niqe", "brisque", "musiq") if key in unavailable})
     if learned_before["clipiqa"] is None:
         reasons["clipiqa"] = unavailable.get("clipiqa", "CLIP-IQA is unavailable.")
     for suffix, field in (("in", "before"), ("out", "after")):

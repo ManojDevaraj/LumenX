@@ -11,7 +11,7 @@ from .types import DenoiseResult, DiagnosisResult, RecoveryResult
 
 
 def denoise(image: np.ndarray, diagnosis: DiagnosisResult, recovery: RecoveryResult, cfg: EngineConfig, *,
-            recovery_enabled: bool = True, uniform: bool = False) -> DenoiseResult:
+            recovery_enabled: bool = True, uniform: bool = False, correction_mask: np.ndarray | None = None) -> DenoiseResult:
     """Denoise RGB via YCrCb; confidence controls texture smoothing only."""
     c = cfg["real"]["denoise"]
     epsilon = cfg["real"]["epsilon"]
@@ -53,5 +53,8 @@ def denoise(image: np.ndarray, diagnosis: DiagnosisResult, recovery: RecoveryRes
     # Recoverability modulates texture smoothing only; it must never reduce the
     # deep model's exposure through a post-denoise gain cap.
     result = np.clip(result, 0, 1)
+    if correction_mask is not None:
+        mask = np.clip(correction_mask, 0, 1)[..., None]
+        result = image * (1 - mask) + result * mask
     gain = luminance(result, cfg) / np.maximum(diagnosis.luminance, epsilon)
     return DenoiseResult(result, gain, strength)

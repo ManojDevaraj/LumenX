@@ -79,7 +79,8 @@ def tune(image: np.ndarray, diagnosis: DiagnosisResult, cfg: EngineConfig, seed:
             total = candidate.total + clip_score * c["clipiqa_weight"] if candidate.total is not None else None
             candidates[index] = replace(candidate, scores=scores, total=total)
             totals[index] = total if total is not None else -np.inf
-    winner = int(np.argmax(totals)) if np.isfinite(totals).any() else 10
+    # Stable argmax deliberately chooses the least-correction candidate on ties.
+    winner = int(np.argmax(totals)) if np.isfinite(totals).any() else 0
     chosen = candidates[winner]
     candidates[winner] = replace(chosen, chosen=True)
     for index, candidate in enumerate(candidates):
