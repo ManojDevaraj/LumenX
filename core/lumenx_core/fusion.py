@@ -70,7 +70,6 @@ def fuse(image: np.ndarray, deep: np.ndarray | None, classical: np.ndarray | Non
 def repair_deep(image: np.ndarray, deep: np.ndarray, diagnosis: DiagnosisResult,
                 cfg: EngineConfig, *, strength: float = 1.0) -> FusionResult:
     """Keep full-resolution CIDNet output and repair only local highlights."""
-    c = cfg["fusion"]
     h, w = image.shape[:2]
     clipped = (channel_max(deep) >= 0.98).astype(np.float32)
     # Overshoot halo mask around diagnosed hotspot rings.

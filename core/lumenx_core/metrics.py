@@ -23,6 +23,17 @@ def clipiqa_batch(images: list[np.ndarray]) -> list[float] | None:
     global _CLIPIQA, _CLIPIQA_ERROR
     if not images or _CLIPIQA_ERROR is not None:
         return None
+    try:
+        if _CLIPIQA is None:
+            import pyiqa
+            _CLIPIQA = pyiqa.create_metric("clipiqa", device="cuda" if _cuda_available() else "cpu")
+        import torch
+        batch = torch.from_numpy(np.stack(images)).permute(0, 3, 1, 2).float().div_(255)
+        with torch.inference_mode():
+            return [float(value) for value in _CLIPIQA(batch).detach().cpu().reshape(-1)]
+    except Exception as exc:  # optional model dependency must never break processing
+        _CLIPIQA_ERROR = f"CLIP-IQA unavailable: {type(exc).__name__}."
+        return None
 
 
 def _iqa(name: str, images: list[np.ndarray], reference: list[np.ndarray] | None = None) -> list[float] | None:
@@ -41,17 +52,6 @@ def _iqa(name: str, images: list[np.ndarray], reference: list[np.ndarray] | None
         return [float(value) for value in values.detach().cpu().reshape(-1)]
     except Exception as exc:
         _IQA_ERRORS[name] = f"{name.upper()} unavailable: {type(exc).__name__}."
-        return None
-    try:
-        if _CLIPIQA is None:
-            import pyiqa
-            _CLIPIQA = pyiqa.create_metric("clipiqa", device="cuda" if _cuda_available() else "cpu")
-        import torch
-        batch = torch.from_numpy(np.stack(images)).permute(0, 3, 1, 2).float().div_(255)
-        with torch.inference_mode():
-            return [float(value) for value in _CLIPIQA(batch).detach().cpu().reshape(-1)]
-    except Exception as exc:  # optional model dependency must never break processing
-        _CLIPIQA_ERROR = f"CLIP-IQA unavailable: {type(exc).__name__}."
         return None
 
 

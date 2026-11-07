@@ -13,6 +13,13 @@
 - The `no_dl` ablation retains its existing classical-only fusion fallback to
   preserve the frozen stage schedule. Step 1 regression gate: 22 passed.
 
+## core-v0.4.2 development — black invariant repair
+
+- Lab CLAHE could introduce a quantised pedestal into a pure black frame.
+  Classical recomposition now masks pixels with zero input signal and zero local
+  variance after colour processing, keeping black input black without weakening
+  the shape test. Full suite: 359 passed, 13 GPU tests deselected; Ruff clean.
+
 ## core-v0.4.2 development — metrics work in progress
 
 - MetricSuite now attempts SSIM/LPIPS (paired) and NIQE/BRISQUE/CLIP-IQA/MUSIQ
