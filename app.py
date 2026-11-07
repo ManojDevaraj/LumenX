@@ -382,7 +382,7 @@ html, body, .gradio-container {
 """
 
 
-with gr.Blocks(title="LumenX — Low-Light Restoration", css=UI_CSS, elem_id="lumenx-app") as demo:
+with gr.Blocks(title="LumenX — Low-Light Restoration", elem_id="lumenx-app") as demo:
     gr.HTML(
         """
         <div class="lx-topbar">
@@ -439,7 +439,6 @@ with gr.Blocks(title="LumenX — Low-Light Restoration", css=UI_CSS, elem_id="lu
                     output_image = gr.Image(
                         label="Enhanced output",
                         height=390,
-                        show_download_button=True,
                         elem_classes=["lx-image-output"],
                     )
                     report = gr.Markdown(elem_classes=["lx-report"])
@@ -460,7 +459,7 @@ with gr.Blocks(title="LumenX — Low-Light Restoration", css=UI_CSS, elem_id="lu
             )
             restore_event.then(
                 _completed_status,
-                inputs=[output_image, mode],
+                inputs=[input_image, mode],
                 outputs=[live_status],
                 queue=False,
             )
@@ -506,4 +505,4 @@ with gr.Blocks(title="LumenX — Low-Light Restoration", css=UI_CSS, elem_id="lu
         "Enhancement runs on the uploaded image; avoid sending sensitive photos to this public demo.</div>"
     )
 
-demo.queue(max_size=8).launch()
+demo.queue(max_size=8).launch(css=UI_CSS)
